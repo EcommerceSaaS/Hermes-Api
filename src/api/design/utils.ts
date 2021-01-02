@@ -1,4 +1,4 @@
-import { productTypeModel } from "../productType/ProductTypeModel";
+import { productTypeModel } from "../product-type/ProductTypeModel";
 
 async function getPrice(productTypesRefs: string[]): Promise<number> {
   const productTypes = await productTypeModel.find({

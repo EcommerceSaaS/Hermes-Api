@@ -1,5 +1,5 @@
 import { Document } from "mongoose";
-import { IProductType } from "../productType/IProductType";
+import { IProductType } from "../product-type/IProductType";
 export interface ICategory extends Document {
   id: string;
   name: string;

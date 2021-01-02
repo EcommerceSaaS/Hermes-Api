@@ -10,10 +10,10 @@ import {
 import mongoose from "mongoose";
 import { pick, merge } from "lodash";
 import { validateCategory, Category } from "./CategoryModel";
-import { productTypeRouter } from "../productType/ProductTypeRouter";
+import { productTypeRouter } from "../product-type/ProductTypeRouter";
 import { getGFS } from "../../config/DataBaseConnection";
 import { designsRouter } from "../design/DesignRoute";
-import { PRODUCT_TYPES_SCHEMA } from "../productType/ProductTypeModel";
+import { PRODUCT_TYPES_SCHEMA } from "../product-type/ProductTypeModel";
 import { ICategory } from "./ICategory";
 
 const categoriesRouter = Router({ mergeParams: true });

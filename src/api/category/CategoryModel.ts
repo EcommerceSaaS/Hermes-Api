@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Joi from "@hapi/joi";
 import { ICategory } from "./ICategory";
 import { validator } from "../../utils/utils";
-import { PRODUCT_TYPES_SCHEMA } from "../productType/ProductTypeModel";
+import { PRODUCT_TYPES_SCHEMA } from "../product-type/ProductTypeModel";
 export const CATEGORIES_SCHEMA = "categories";
 const categorySchema = new mongoose.Schema(
   {

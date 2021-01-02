@@ -1,7 +1,7 @@
 {
-  "name": "pixelcraftbackend",
+  "name": "backend-api",
   "version": "1.0.0",
-  "description": "Backend for shopping for me platform",
+  "description": "Backend for Ecommerce platform",
   "main": "index.js",
   "scripts": {
     "test": "not yet supported",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yacinebenkaidali/ShoppingForMe.git"
+    "url": "https://github.com/EcommerceSaaS/Hermes-Api.git"
   },
   "engines": {
     "node": "12.13.0"
@@ -27,9 +27,9 @@
   "author": "Yacine BENKAIDALI",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/yacinebenkaidali/ShoppingForMe/issues"
+    "url": "https://github.com/EcommerceSaaS/Hermes-Api.git/issues"
   },
-  "homepage": "https://github.com/yacinebenkaidali/ShoppingForMe#readme",
+  "homepage": "https://github.com/EcommerceSaaS/Hermes-Api.git#readme",
   "devDependencies": {
     "@types/bcrypt": "^3.0.0",
     "@types/compression": "^1.7.0",

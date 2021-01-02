@@ -8,7 +8,7 @@ import {
 } from "../../services/http/Responses";
 import { pick } from "lodash";
 import { DesignModel } from "../design/DesignModel";
-import { CodeModel } from "../promoCode/CodeModel";
+import { CodeModel } from "../promo-code/CodeModel";
 import { IDesign } from "../design/IDesign";
 import { User } from "../users/UserModel";
 import Auth from "../../services/middlewares/Auth";

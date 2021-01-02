@@ -7,7 +7,7 @@ import {
 } from "../../services/http/Responses";
 import { MattersModel } from "./MatterModel";
 import { pick } from "lodash";
-import { productTypeModel } from "../productType/ProductTypeModel";
+import { productTypeModel } from "../product-type/ProductTypeModel";
 const matterRouter = Router({ mergeParams: true });
 matterRouter.get("/", async (req: Request, res: Response) => {
   try {

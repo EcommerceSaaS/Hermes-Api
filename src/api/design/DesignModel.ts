@@ -3,7 +3,7 @@ import { IDesign } from "./IDesign";
 import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
-import { PRODUCT_TYPES_SCHEMA } from "../productType/ProductTypeModel";
+import { PRODUCT_TYPES_SCHEMA } from "../product-type/ProductTypeModel";
 import { MATTERS_SCHEMA } from "../matters/MatterModel";
 import { COLORS_SCHEMA } from "../colors/ColorModel";
 import { CATEGORIES_SCHEMA } from "../category/CategoryModel";

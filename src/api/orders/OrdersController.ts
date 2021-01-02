@@ -1,6 +1,6 @@
 import { wilayasPricing } from "../../utils/WilayaPricing";
 import { IDesign } from "../design/IDesign";
-import { ICode } from "../promoCode/ICode";
+import { ICode } from "../promo-code/ICode";
 import { User } from "../users/UserModel";
 export async function getTotalPriceWithDiscount(
   designs: IDesign[],

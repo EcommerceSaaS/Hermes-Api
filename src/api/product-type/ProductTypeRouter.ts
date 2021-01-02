@@ -10,6 +10,7 @@ import {
 import { Category } from "../category/CategoryModel";
 import { matterRouter } from "../matters/MattersRoutes";
 import { IProductType } from "./IProductType";
+import { ProductTypeRessource } from "../product-type-resource/ProductTypeResourceModel";
 
 const productTypeRouter = Router({ mergeParams: true });
 productTypeRouter.use("/:productTypeId/matters", matterRouter);
@@ -25,7 +26,6 @@ productTypeRouter.get("/", async (req: Request, res: Response) => {
           path: "productTypes",
           match: { active: true },
           select: { _id: 1, name: 1, price: 1 },
-          // populate: [{ path: "colors" }, { path: "sizes" }],
         });
       sendOKResponse(res, categoryProductTypes);
     } else {
@@ -92,6 +92,28 @@ productTypeRouter.post("/", async (req: Request, res: Response) => {
     const mongoError = productType.validateSync();
     if (mongoError) return sendBadRequestResponse(res, mongoError.message);
     productType = await productType.save();
+    await Promise.all([
+      ProductTypeRessource.insertMany([
+        ...body.matters.map((matter) => {
+          return {
+            productTypeId: productType._id,
+            matterId: matter,
+          };
+        }),
+        ...body.sizes.map((size) => {
+          return {
+            productTypeId: productType._id,
+            sizeId: size,
+          };
+        }),
+        ...body.colors.map((color) => {
+          return {
+            productTypeId: productType._id,
+            colorId: color,
+          };
+        }),
+      ]),
+    ]);
     sendCreatedResponse(res, productType);
   } catch (error) {
     sendErrorResponse(res, error);

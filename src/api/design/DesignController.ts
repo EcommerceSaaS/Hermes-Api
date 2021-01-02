@@ -3,7 +3,7 @@ import { pick } from "lodash";
 import { getGFS } from "../../config/DataBaseConnection";
 import { validateDesign, DesignModel } from "./DesignModel";
 import { removeFiles } from "../../utils/utils";
-import { productTypeModel } from "../productType/ProductTypeModel";
+import { productTypeModel } from "../product-type/ProductTypeModel";
 import { IDesign } from "./IDesign";
 import { DocumentQuery } from "mongoose";
 export async function createDesign(
