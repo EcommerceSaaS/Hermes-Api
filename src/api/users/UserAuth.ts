@@ -1,10 +1,4 @@
-import {
-  Router,
-  Response,
-  NextFunction,
-  Request,
-  RequestHandler,
-} from "express";
+import { Router, Response, Request, RequestHandler } from "express";
 import passport from "passport";
 import { handleUserSignUp } from "./UserController";
 import { validateUser } from "./UserModel";

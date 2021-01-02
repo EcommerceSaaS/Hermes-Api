@@ -8,7 +8,7 @@ import {
   sendErrorResponse,
   sendBadRequestResponse,
 } from "../../services/http/Responses";
-import { DesignModel } from "../design/DesignModel";
+import { ProductModel } from "../product/ProductsModel";
 import Auth from "../../services/middlewares/Auth";
 const rangePossibleValues = ["week", "year", "month"];
 const dataRangePossibleValues = [
@@ -184,9 +184,9 @@ statsRouter.get("/admin-stats", async (req: Request, res: Response) => {
     User.countDocuments({
       isArtist: true,
     }),
-    DesignModel.countDocuments(today),
-    DesignModel.countDocuments(lastMonth),
-    DesignModel.countDocuments(matchRange),
+    ProductModel.countDocuments(today),
+    ProductModel.countDocuments(lastMonth),
+    ProductModel.countDocuments(matchRange),
   ]);
 
   const [
@@ -197,7 +197,7 @@ statsRouter.get("/admin-stats", async (req: Request, res: Response) => {
     nbOrdersByMonth,
     revenuByRange,
   ] = await Promise.all([
-    DesignModel.aggregate([
+    ProductModel.aggregate([
       {
         $addFields: {
           gain: {

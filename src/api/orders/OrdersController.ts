@@ -1,13 +1,13 @@
 import { wilayasPricing } from "../../utils/WilayaPricing";
-import { IDesign } from "../design/IDesign";
+import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
 import { User } from "../users/UserModel";
 export async function getTotalPriceWithDiscount(
-  designs: IDesign[],
+  designs: IProduct[],
   codes: Array<ICode>
-): Promise<IDesign[]> {
-  return new Promise<IDesign[]>(async (res) => {
-    const result = new Set<IDesign>();
+): Promise<IProduct[]> {
+  return new Promise<IProduct[]>(async (res) => {
+    const result = new Set<IProduct>();
     for (const design of designs) {
       let promoCodeApplied = false;
       for (const code of codes) {
@@ -39,7 +39,7 @@ export async function getTotalPriceWithDiscount(
     res([...result]);
   });
 }
-function updateDesignPrice(code: ICode, design: IDesign) {
+function updateDesignPrice(code: ICode, design: IProduct) {
   if (!design.priceAfterReduction)
     design.priceAfterReduction = design.totalPrice;
   switch (code.type) {

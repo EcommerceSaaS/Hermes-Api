@@ -16,7 +16,7 @@ import {
   sendBadRequestResponse,
 } from "../../services/http/Responses";
 import { extractFilesFromRequestFields } from "../../utils/utils";
-import { designsRouter } from "../design/DesignRoute";
+import { designsRouter } from "../product/ProductsRoute";
 import { omit } from "lodash";
 import { adminRouter } from "../admin/AdminRoutes";
 import { categoriesRouter } from "../category/CategoryRoute";

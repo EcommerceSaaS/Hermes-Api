@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { IDesign } from "./IDesign";
+import { IProduct } from "./IProduct";
 import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
@@ -98,10 +98,6 @@ const designSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // storeName: {
-    //   type: String,
-    //   required: true,
-    // },
     artistId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: USERS_SCHEMA,
@@ -123,9 +119,9 @@ const designSchema = new mongoose.Schema(
   },
   { timestamps: true, versionKey: false }
 );
-export const DesignModel = mongoose.model<IDesign>("Designs", designSchema);
+export const ProductModel = mongoose.model<IProduct>("Designs", designSchema);
 
-export function validateDesign(design: IDesign): Joi.ValidationResult {
+export function validateDesign(design: IProduct): Joi.ValidationResult {
   const schema = Joi.object({
     name: Joi.string().min(3).max(50).required(),
     description: Joi.string().min(10).max(255).required(),

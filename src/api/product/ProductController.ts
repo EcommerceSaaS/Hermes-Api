@@ -1,25 +1,25 @@
 import { Request } from "express";
 import { pick } from "lodash";
 import { getGFS } from "../../config/DataBaseConnection";
-import { validateDesign, DesignModel } from "./DesignModel";
+import { validateDesign, ProductModel } from "./ProductsModel";
 import { removeFiles } from "../../utils/utils";
 import { productTypeModel } from "../product-type/ProductTypeModel";
-import { IDesign } from "./IDesign";
+import { IProduct } from "./IProduct";
 import { DocumentQuery } from "mongoose";
 export async function createDesign(
   req: Request,
   files: any,
   artistId: string
-): Promise<IDesign> {
+): Promise<IProduct> {
   return new Promise(async (res, rej) => {
-    const body: IDesign = pick(req.body, [
+    const body: IProduct = pick(req.body, [
       "name",
       "description",
       "designPhotos",
       "categories",
       "collections",
       "productTypes",
-    ]) as IDesign;
+    ]) as IProduct;
     body.artistId = artistId;
     const prodcutTypes: string[] = [];
     body.designPhotos = files.designPhotos;
@@ -35,7 +35,7 @@ export async function createDesign(
         return rej(error.details[0].message);
       }
       body.totalPrice = await getPrice(prodcutTypes);
-      let design = new DesignModel(body);
+      let design = new ProductModel(body);
       const mongoValidation = design.validateSync();
       if (mongoValidation) {
         removeFiles(gfs, files.allFiles);
@@ -98,7 +98,7 @@ export async function getAllDesign(
   categoriesFilter: string[],
   colorsFilter: string[],
   productTypesFilter: string[]
-): Promise<[IDesign[], number]> {
+): Promise<[IProduct[], number]> {
   const filter: {
     name: {
       $regex: string;
@@ -133,22 +133,22 @@ export async function getAllDesign(
   if (productTypesFilter.length)
     filter["productTypes.productTypeRef"] = { $in: productTypesFilter };
   return await Promise.all([
-    DesignModel.find(filter)
+    ProductModel.find(filter)
       .populate(detailsLevel)
       .limit(limit)
       .skip(limit * (page - 1))
       .sort(sortParams),
-    DesignModel.countDocuments(filter),
+    ProductModel.countDocuments(filter),
   ]);
 }
 export async function getDesignbyId(
   desginId: string
-): DocumentQuery<IDesign, IDesign, unknown> {
-  return await DesignModel.findById({ _id: desginId }).populate(detailsLevel);
+): DocumentQuery<IProduct, IProduct, unknown> {
+  return await ProductModel.findById({ _id: desginId }).populate(detailsLevel);
 }
 export async function getDesignWithReviews(
   designId: string
-): DocumentQuery<IDesign, IDesign, unknown> {
+): DocumentQuery<IProduct, IProduct, unknown> {
   detailsLevel.push({
     path: "reviews",
     select: "-updateAt",
@@ -158,7 +158,7 @@ export async function getDesignWithReviews(
       select: "_id name profilePhoto",
     },
   });
-  const res = await DesignModel.findById({ _id: designId }).populate(
+  const res = await ProductModel.findById({ _id: designId }).populate(
     detailsLevel
   );
   detailsLevel.pop();

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import g from "gridfs-stream";
 import Joi from "@hapi/joi";
-import { IProductTypeDesign } from "../api/design/IDesign";
+import { IProductTypeDesign } from "../api/product/IProduct";
 export function extractFilesFromRequestFields(req: any) {
   const profilePhotoFile = req.files.profilePicture
     ? req.files.profilePicture[0]

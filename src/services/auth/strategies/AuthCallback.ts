@@ -4,10 +4,10 @@ export const callback = async (
   refreshToken: string,
   profile: any,
   done: (error: any, user?: any, info?: any) => void
-) => {
+): Promise<void> => {
   try {
     let user = await User.findOne({
-      email: profile.emails!![0].value,
+      email: profile.emails[0].value,
     });
     if (user) {
       return done(null, user);
@@ -16,7 +16,7 @@ export const callback = async (
     user = new User({
       profilePhoto: profile.picture,
       name: profile.name,
-      email: profile.emails!![0].value,
+      email: profile.emails[0].value,
     });
     await user.save();
     return done(null, user);

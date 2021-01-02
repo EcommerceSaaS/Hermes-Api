@@ -6,7 +6,7 @@ export interface IProductTypeDesign {
   colors: string[];
 }
 
-export interface IDesign extends Document {
+export interface IProduct extends Document {
   name: string;
   description: string;
   designPhotos: string[];

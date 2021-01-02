@@ -4,7 +4,7 @@ import {
   sendOKResponse,
 } from "../../services/http/Responses";
 import { adminModel } from "../admin/AdminModel";
-import { DesignModel } from "../design/DesignModel";
+import { ProductModel } from "../product/ProductsModel";
 import { User } from "../users/UserModel";
 const mainPageRouter = Router();
 mainPageRouter.get("/mainPageInfo", async (req: Request, res: Response) => {
@@ -16,8 +16,8 @@ mainPageRouter.get("/mainPageInfo", async (req: Request, res: Response) => {
       popularArtists,
     ] = await Promise.all([
       adminModel.findOne({ default: true }).select("bannerImages"),
-      DesignModel.find().sort({ createdAt: -1 }).limit(8),
-      DesignModel.find().sort({ numberOfOrders: -1 }).limit(8),
+      ProductModel.find().sort({ createdAt: -1 }).limit(8),
+      ProductModel.find().sort({ numberOfOrders: -1 }).limit(8),
       User.aggregate([
         {
           $lookup: {

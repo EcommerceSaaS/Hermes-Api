@@ -3,7 +3,7 @@ import cors from "cors";
 import { PORT } from "./config/Constants";
 import { config } from "dotenv";
 config();
-import { designsRouter } from "./api/design/DesignRoute";
+import { designsRouter } from "./api/product/ProductsRoute";
 import { initializeDataBase } from "./config/DataBaseConnection";
 import { publicImagesRouter } from "./api/public/ImageDownloadRoute";
 import { userRouter } from "./api/users/UserRoute";

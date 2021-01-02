@@ -10,14 +10,14 @@ import { pick } from "lodash";
 import { validateReview, reviewModel } from "./ReviewModel";
 import mongoose from "mongoose";
 import { User } from "../users/UserModel";
-import { DesignModel } from "../design/DesignModel";
+import { ProductModel } from "../product/ProductsModel";
 import { IReview } from "./IReview";
 const reviewsRouter = Router({ mergeParams: true });
 reviewsRouter.get("/", async (req: Request, res: Response) => {
   try {
     let reviews = null;
     if (req.params.designId) {
-      reviews = await DesignModel.find({ _id: req.params.designId })
+      reviews = await ProductModel.find({ _id: req.params.designId })
         .select("reviews")
         .populate("reviews")
         .populate({
@@ -57,7 +57,7 @@ reviewsRouter.post("/", [Auth], async (req: any, res: Response) => {
       User.findByIdAndUpdate(req.user.id, {
         $push: { reviews: review._id },
       }),
-      DesignModel.findByIdAndUpdate(body.designId, {
+      ProductModel.findByIdAndUpdate(body.designId, {
         $push: { reviews: review._id },
       }),
     ]);
@@ -99,7 +99,7 @@ reviewsRouter.delete(
         User.findByIdAndUpdate(req.user.id, {
           $pull: { reviews: review._id },
         }),
-        DesignModel.findByIdAndUpdate(req.params.designId, {
+        ProductModel.findByIdAndUpdate(req.params.designId, {
           $pull: { reviews: review._id },
         }),
       ]);

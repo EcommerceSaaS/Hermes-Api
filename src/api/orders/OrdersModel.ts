@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { IOrder, IOrderRequest } from "./IOrder";
 import { validator } from "../../utils/utils";
 import Joi from "@hapi/joi";
-import { DesignModel } from "../design/DesignModel";
+import { ProductModel } from "../product/ProductsModel";
 const ordersStates = ["onhold", "ready", "delivered"];
 const necklineTypes = [
   "Unisexe Regular",
@@ -95,7 +95,7 @@ ordersSchema.pre("save", async function (this: any, next: any) {
       designIds.push(design.designRef);
     });
 
-    await DesignModel.update(
+    await ProductModel.update(
       { _id: { $in: designIds } },
       { $inc: { numberOfOrders: 1 } },
       { multi: true }
@@ -111,7 +111,7 @@ ordersSchema.post("findOneAndDelete", async function (doc: any) {
     doc.designs.forEach((design: IOrderRequest) => {
       designIds.push(design.designRef);
     });
-    await DesignModel.update(
+    await ProductModel.update(
       { _id: { $in: designIds } },
       { $inc: { numberOfOrders: -1 } },
       { multi: true }

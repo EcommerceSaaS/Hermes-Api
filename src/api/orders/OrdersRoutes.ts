@@ -7,9 +7,9 @@ import {
   sendOKResponse,
 } from "../../services/http/Responses";
 import { pick } from "lodash";
-import { DesignModel } from "../design/DesignModel";
+import { ProductModel } from "../product/ProductsModel";
 import { CodeModel } from "../promo-code/CodeModel";
-import { IDesign } from "../design/IDesign";
+import { IProduct } from "../product/IProduct";
 import { User } from "../users/UserModel";
 import Auth from "../../services/middlewares/Auth";
 import {
@@ -38,11 +38,11 @@ ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
       CodeModel.find({
         $or: [{ code: body.promoCode }, { kind: "REDUCTION" }],
       }).select("type amount artist category design kind"),
-      DesignModel.find({ _id: { $in: [...designIds] } }).select(
+      ProductModel.find({ _id: { $in: [...designIds] } }).select(
         "totalPrice categories"
       ),
     ]);
-    let designs: IDesign[] = null;
+    let designs: IProduct[] = null;
     let totalPrice = 0;
 
     if (!results[0].length) {

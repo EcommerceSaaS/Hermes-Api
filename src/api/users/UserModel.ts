@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import { urlPattern } from "../../utils/utils";
 import { validator } from "../../utils/utils";
 import { ORDERS_SCHEMA } from "../orders/OrdersModel";
-import { DESIGNS_SCHEMA } from "../design/DesignModel";
+import { DESIGNS_SCHEMA } from "../product/ProductsModel";
 import { REVIEWS_SCHEMA } from "../reviews/ReviewModel";
 export const USERS_SCHEMA = "User";
 const userSchema = new mongoose.Schema(

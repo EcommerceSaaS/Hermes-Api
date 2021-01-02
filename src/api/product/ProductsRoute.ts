@@ -22,9 +22,9 @@ import {
   getDesignbyId,
   detailsLevel,
   getDesignWithReviews,
-} from "./DesignController";
-import { DesignModel } from "./DesignModel";
-import { IDesign } from "./IDesign";
+} from "./ProductController";
+import { ProductModel } from "./ProductsModel";
+import { IProduct as IDesign } from "./IProduct";
 import { getGFS } from "../../config/DataBaseConnection";
 import Auth from "../../services/middlewares/Auth";
 import Artist from "../../services/middlewares/Artist";
@@ -104,7 +104,7 @@ designsRouter.get("/", async (req: Request, res: Response) => {
       )
         return sendBadRequestResponse(res, "One of the Ids isn't valid");
       const user = await User.findById(userId); //TODO removed this and filter by artistId
-      const designs = await DesignModel.find({
+      const designs = await ProductModel.find({
         _id: { $in: [...user.designs] },
         categories: categoryId,
       }).select("name _id");
@@ -117,7 +117,7 @@ designsRouter.get("/", async (req: Request, res: Response) => {
 
       const user = await User.findById(userId);
       if (categoriesOnly) {
-        const designs = await DesignModel.find({
+        const designs = await ProductModel.find({
           _id: { $in: [...user.designs] },
         }).select("categories");
         const result: string[] = [];
@@ -142,7 +142,7 @@ designsRouter.get("/", async (req: Request, res: Response) => {
         name: { $regex: q, $options: "i" },
       };
       if (categories.length) filter["categories"] = { $in: categories };
-      const designs = await DesignModel.find(filter)
+      const designs = await ProductModel.find(filter)
         .populate(detailsLevel)
         .limit(limit)
         .skip(limit * (page - 1));
@@ -181,7 +181,7 @@ designsRouter.get(
     try {
       const design = await getDesignWithReviews(designId);
       const collections = design.collections;
-      const similiarDesigns = await DesignModel.find({
+      const similiarDesigns = await ProductModel.find({
         _id: { $ne: designId },
         collections: {
           $in: collections,
@@ -226,7 +226,7 @@ designsRouter.put("/productType/:designId", (req: Request, res: Response) => {
       if (error) return sendBadRequestResponse(res, error.details[0].message);
       body.productTypePhoto = req.file.filename;
       const newPriceProductType = [body.productTypeRef];
-      let design = await DesignModel.findById({ _id: designId });
+      let design = await ProductModel.findById({ _id: designId });
       design.productTypes.forEach((productType) =>
         newPriceProductType.push(productType.productTypeRef)
       );
@@ -258,7 +258,7 @@ designsRouter.put(
           "Either one of two params is missing "
         );
       //pre validation
-      let design = await DesignModel.findById({
+      let design = await ProductModel.findById({
         _id: designId,
         "productTypes.productTypeRef": productTypeRef,
       });
@@ -337,7 +337,7 @@ designsRouter.put("/:designId", (req: any, res: Response) => {
     try {
       const gfs = getGFS();
 
-      let design = await DesignModel.findById(designId);
+      let design = await ProductModel.findById(designId);
       if (design) {
         let filesToDelete: string[] = [];
         if (body.designPhotostoDelete) {
@@ -348,7 +348,7 @@ designsRouter.put("/:designId", (req: any, res: Response) => {
         }
         body.designPhotos = [...files.designPhotos, ...design.designPhotos];
         design = merge(design, body);
-        const newDesign = await DesignModel.findByIdAndUpdate(
+        const newDesign = await ProductModel.findByIdAndUpdate(
           design._id,
           design,
           { new: true }
@@ -380,7 +380,7 @@ designsRouter.delete(
       );
     try {
       const gfs = getGFS();
-      const design = await DesignModel.findById(designId);
+      const design = await ProductModel.findById(designId);
       let imageToDelete = null;
       const productTypes = design.productTypes
         .map((item) => {
@@ -409,7 +409,7 @@ designsRouter.delete(
     if (!designId || !mongoose.isValidObjectId(designId))
       return sendBadRequestResponse(res, "design id not valid");
     try {
-      const design: IDesign = await DesignModel.findByIdAndDelete(designId);
+      const design: IDesign = await ProductModel.findByIdAndDelete(designId);
       if (!design)
         return sendBadRequestResponse(
           res,
