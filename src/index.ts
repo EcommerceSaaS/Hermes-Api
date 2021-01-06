@@ -26,6 +26,8 @@ import stats from "./api/stats/Stats";
 import { matterRouter } from "./api/matters/MattersRoutes";
 import { mainPageRouter } from "./api/Info/MainPage";
 import { reviewsRouter } from "./api/reviews/ReviewRouter";
+import { valuesRouter } from "./api/option/values/ValuesRouter";
+import { optionsRouter } from "./api/option/OptionsRouter";
 class App {
   public app: any;
   constructor() {
@@ -49,6 +51,8 @@ class App {
     // this.app.use(compression());
     this.app.use("/uploads", express.static(path.resolve("uploads")));
     this.app.use("/designs", designsRouter);
+    this.app.use("/values", valuesRouter);
+    this.app.use("/options", optionsRouter);
     this.app.use("/public", publicImagesRouter);
     this.app.use("/users", userRouter);
     this.app.use("/colors", colorsRouter);

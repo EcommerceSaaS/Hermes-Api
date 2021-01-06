@@ -3,12 +3,12 @@ import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
 import { User } from "../users/UserModel";
 export async function getTotalPriceWithDiscount(
-  designs: IProduct[],
+  products: IProduct[],
   codes: Array<ICode>
 ): Promise<IProduct[]> {
   return new Promise<IProduct[]>(async (res) => {
     const result = new Set<IProduct>();
-    for (const design of designs) {
+    for (const design of products) {
       let promoCodeApplied = false;
       for (const code of codes) {
         //for each design check if code is applied
@@ -23,7 +23,7 @@ export async function getTotalPriceWithDiscount(
           // we access database just in case no category or design id can be applied
           const user = await User.findOne({
             _id: code.artist,
-            designs: design._id,
+            products: design._id,
           });
           if (user) {
             result.add(updateDesignPrice(code, design));

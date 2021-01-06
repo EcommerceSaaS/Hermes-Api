@@ -10,13 +10,12 @@ import { IColor } from "./IColor";
 
 const colorsRouter = Router();
 colorsRouter.get("/", async (req: Request, res: Response) => {
+  const filter = req.query.active
+    ? { active: JSON.parse(req.query.active) }
+    : {};
   const result = await Promise.all([
-    Color.find(
-      req.query.active ? { active: JSON.parse(req.query.active) } : {}
-    ),
-    Color.countDocuments(
-      req.query.active ? { active: JSON.parse(req.query.active) } : {}
-    ),
+    Color.find(filter),
+    Color.countDocuments(),
   ]);
   sendOKResponse(res, { colors: result[0], count: result[1] });
 });
@@ -34,7 +33,7 @@ colorsRouter.post("/", async (req: Request, res: Response) => {
 });
 
 colorsRouter.get("/:id", async (req: Request, res: Response) => {
-  const colorId = req.params.id;
+  const { id: colorId } = req.params;
   try {
     const color = await Color.find({ _id: colorId });
     if (!color) return sendBadRequestResponse(res, "Color id does not exist");

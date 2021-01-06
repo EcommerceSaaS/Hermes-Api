@@ -19,13 +19,13 @@ const collectionsRouter = Router();
 const multer = getMulterSingle();
 collectionsRouter.get("/", async (req: Request, res: Response) => {
   try {
+    const filter = req.query.active
+      ? { active: JSON.parse(req.query.active) }
+      : {};
+
     const result = await Promise.all([
-      Collection.find(
-        req.query.active ? { active: JSON.parse(req.query.active) } : {}
-      ),
-      Collection.countDocuments(
-        req.query.active ? { active: JSON.parse(req.query.active) } : {}
-      ),
+      Collection.find(filter),
+      Collection.countDocuments(filter),
     ]);
     sendOKResponse(res, { collections: result[0], count: result[1] });
   } catch (error) {
