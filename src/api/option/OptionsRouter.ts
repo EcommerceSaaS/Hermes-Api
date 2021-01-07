@@ -6,33 +6,42 @@ import {
 import { pick } from "lodash";
 import { OptionsModel, validateOption } from "./OptionsModel";
 import { IOption } from "./IOption";
-import { ValuesModel } from "./values/ValuesModel";
-
+import { routesFactory } from "../../utils/utils";
 const optionsRouter = Router();
 optionsRouter.post("/", async (req: Request, res: Response) => {
-  const body: IOption = pick(req.body, ["name", "values"]) as IOption;
-  const { error } = validateOption(body);
-  if (error) sendBadRequestResponse(res, error.details[0].message);
-  let option = new OptionsModel(body);
-  const valueRes = await ValuesModel.updateMany(
-    { _id: { $in: [...option.values] } },
-    { optionId: option._id }
-  );
-  console.log({ valueRes });
-  option = await option.save();
-  sendOKResponse(res, option);
+  routesFactory(res, async () => {
+    const body: IOption = pick(req.body, ["name", "values"]) as IOption;
+    const { error } = validateOption(body);
+    if (error) sendBadRequestResponse(res, error.details[0].message);
+    let option = new OptionsModel(body);
+    option = await option.save();
+    sendOKResponse(res, option);
+  });
 });
 optionsRouter.get("/", (req: Request, res: Response) => {
-  // const body=
-  sendOKResponse(res, {});
+  routesFactory(res, async () => {
+    const options = await OptionsModel.find({ active: true });
+    sendOKResponse(res, options);
+  });
 });
 
 optionsRouter.put("/:id", (req: Request, res: Response) => {
-  // const body=
-  sendOKResponse(res, {});
+  routesFactory(res, async () => {
+    const body = req.body;
+    const { id: optionId } = req.params;
+    const option = await OptionsModel.findByIdAndUpdate(
+      { _id: optionId },
+      body,
+      { new: true }
+    );
+    sendOKResponse(res, option);
+  });
 });
 optionsRouter.delete("/:id", (req: Request, res: Response) => {
-  // const body=
-  sendOKResponse(res, {});
+  routesFactory(res, async () => {
+    const { id: optionId } = req.params;
+    const option = await OptionsModel.findByIdAndDelete({ _id: optionId });
+    sendOKResponse(res, option);
+  });
 });
 export { optionsRouter };

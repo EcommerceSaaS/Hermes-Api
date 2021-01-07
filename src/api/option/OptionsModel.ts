@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 import { IOption } from "./IOption";
-import { validator } from "../../utils/utils";
-import { VALUES_SCHEMA } from "./values/ValuesModel";
 import Joi from "@hapi/joi";
 export const OPTIONS_SCHEMA = "options";
 const optionSchema = new mongoose.Schema(
@@ -12,27 +10,44 @@ const optionSchema = new mongoose.Schema(
       min: 3,
       max: 10,
     },
-    values: {
-      type: [
+    active: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    values: [
+      new mongoose.Schema(
         {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: VALUES_SCHEMA,
-          validate: {
-            validator,
-            message: `ObjectId is Not valid`,
+          name: {
+            type: String,
+            minlength: 3,
+            required: true,
+            maxlength: 10,
+          },
+          price: {
+            type: Number,
+            min: 0,
+            required: true,
           },
         },
-      ],
-      min: 1,
-      required: true,
-    },
+        { _id: true, versionKey: false, timestamps: true }
+      ),
+    ],
   },
   { versionKey: false, timestamps: true }
 );
 export function validateOption(option: IOption): Joi.ValidationResult {
   const schema = Joi.object({
     name: Joi.string().min(3).max(10).required(),
-    values: Joi.array().items(Joi.string()).min(1).required(),
+    values: Joi.array()
+      .items(
+        Joi.object({
+          name: Joi.string().required(),
+          price: Joi.number().required(),
+        })
+      )
+      .min(1)
+      .required(),
   });
   return schema.validate(option);
 }
