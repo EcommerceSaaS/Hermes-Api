@@ -16,7 +16,7 @@ import {
   sendBadRequestResponse,
 } from "../../services/http/Responses";
 import { extractFilesFromRequestFields } from "../../utils/utils";
-import { designsRouter } from "../product/ProductsRoute";
+import { productsRouter } from "../product/ProductsRoute";
 import { omit } from "lodash";
 import { adminRouter } from "../admin/AdminRoutes";
 import { categoriesRouter } from "../category/CategoryRoute";
@@ -30,7 +30,7 @@ class UserRoute {
     this.mountRoutes();
   }
   private mountRoutes() {
-    this.router.use("/:userId/designs", designsRouter);
+    this.router.use("/:userId/products", productsRouter);
     this.router.use("/:userId/categories", categoriesRouter);
     this.router.use("/auth", authRouter);
     this.router.use("/artists", artistRouter);

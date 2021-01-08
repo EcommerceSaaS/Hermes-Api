@@ -1,9 +1,6 @@
 import { Request, Response, Router } from "express";
 import { MulterError } from "multer";
-import {
-  getMulterDesignFields,
-  getMulterSingle,
-} from "../../config/multerConfig";
+import { getMulterArray } from "../../config/multerConfig";
 import mongoose from "mongoose";
 import {
   sendErrorResponse,
@@ -12,9 +9,8 @@ import {
   sendOKResponse,
 } from "../../services/http/Responses";
 import {
+  extractFilesFromRequestArray,
   extractFilesFromRequestDesign,
-  removeFiles,
-  validateDesignProductType,
 } from "../../utils/utils";
 import {
   createDesign,
@@ -30,38 +26,19 @@ import Auth from "../../services/middlewares/Auth";
 import Artist from "../../services/middlewares/Artist";
 import { User } from "../users/UserModel";
 import { pick, merge, uniqWith, isEqual } from "lodash";
-import { MattersModel } from "../matters/MatterModel";
-import { getPrice } from "./utils";
 import { reviewsRouter } from "../reviews/ReviewRouter";
-import IMatter from "../matters/IMatter";
 
-const multer = getMulterDesignFields();
-const singleFileMulter = getMulterSingle();
-const designsRouter = Router({ mergeParams: true });
-designsRouter.use("/:designId/reviews", reviewsRouter);
-designsRouter.post("/", [Auth, Artist], async (req: any, res: Response) => {
+const multer = getMulterArray(8);
+const productsRouter = Router({ mergeParams: true });
+productsRouter.use("/:designId/reviews", reviewsRouter);
+productsRouter.post("/", [], async (req: any, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
-    const files: any = extractFilesFromRequestDesign(req);
-    if (!files.designPhotos || !files.productTypePhotos)
-      return sendBadRequestResponse(
-        res,
-        "Each product has to have images and each productType too"
-      );
-    files.designPhotos.forEach((item: { filename: string }, index: number) => {
-      files.designPhotos[index] = item.filename;
-    });
-    files.productTypePhotos.forEach(
-      (item: { filename: string }, index: number) => {
-        files.productTypePhotos[index] = item.filename;
-      }
-    );
-    files.allFiles = [...files.productTypePhotos, ...files.designPhotos];
+    const files = extractFilesFromRequestArray(req);
+    if (!files.length)
+      return sendBadRequestResponse(res, "Each product has to have images");
     try {
-      let artist = await User.findById({ _id: req.user.id });
-      const design = await createDesign(req, files, artist._id);
-      artist = await artist.update({ $push: { designs: design._id } });
-      //promise all
+      const design = await createDesign(req, files);
       sendCreatedResponse(res, design);
     } catch (error) {
       if (err instanceof Error) return sendErrorResponse(res, error);
@@ -69,7 +46,7 @@ designsRouter.post("/", [Auth, Artist], async (req: any, res: Response) => {
     }
   });
 });
-designsRouter.get("/", async (req: Request, res: Response) => {
+productsRouter.get("/", async (req: Request, res: Response) => {
   try {
     let {
       limit,
@@ -79,15 +56,11 @@ designsRouter.get("/", async (req: Request, res: Response) => {
       q,
       collections,
       categories,
-      colors,
-      productTypes,
       minPrice,
       maxPrice,
     } = req.query;
     collections = collections ? collections : [];
     categories = categories ? categories : [];
-    colors = colors ? colors : [];
-    productTypes = productTypes ? productTypes : [];
     minPrice = minPrice ? Number(minPrice) : 0;
     maxPrice = maxPrice ? Number(maxPrice) : 9999999999;
     limit = Number(limit) || 10;
@@ -158,9 +131,7 @@ designsRouter.get("/", async (req: Request, res: Response) => {
       minPrice,
       maxPrice,
       collections,
-      categories,
-      colors,
-      productTypes
+      categories
     );
     sendOKResponse(res, {
       designs: result[0],
@@ -172,7 +143,7 @@ designsRouter.get("/", async (req: Request, res: Response) => {
     sendErrorResponse(res, error);
   }
 });
-designsRouter.get(
+productsRouter.get(
   "/designDetails/:designId",
   async (req: Request, res: Response) => {
     const { designId } = req.params;
@@ -193,7 +164,7 @@ designsRouter.get(
     }
   }
 );
-designsRouter.get("/:designId", async (req: Request, res: Response) => {
+productsRouter.get("/:designId", async (req: Request, res: Response) => {
   const designId = req.params.designId;
   //userID for design of a certain user
   if (!designId || !mongoose.isValidObjectId(designId))
@@ -206,104 +177,8 @@ designsRouter.get("/:designId", async (req: Request, res: Response) => {
     sendErrorResponse(res, error);
   }
 });
-designsRouter.put("/productType/:designId", (req: Request, res: Response) => {
-  singleFileMulter(req, res, async (err: MulterError) => {
-    if (err) return sendErrorResponse(res, err);
-    try {
-      const { designId } = req.params;
-      if (!mongoose.isValidObjectId(designId) || !req.file)
-        return sendBadRequestResponse(
-          res,
-          "Either designId is not valid or an image was not uploaded"
-        );
-      const body: {
-        productTypeRef: string;
-        matter: string | IMatter;
-        colors: string;
-        productTypePhoto?: string;
-      } = pick(req.body, ["productTypeRef", "matter", "colors"]);
-      const { error } = validateDesignProductType(body);
-      if (error) return sendBadRequestResponse(res, error.details[0].message);
-      body.productTypePhoto = req.file.filename;
-      const newPriceProductType = [body.productTypeRef];
-      let design = await ProductModel.findById({ _id: designId });
-      design.productTypes.forEach((productType) =>
-        newPriceProductType.push(productType.productTypeRef)
-      );
-      const newPrice = await getPrice(newPriceProductType);
-      design = await design.update({
-        totalPrice: newPrice,
-        $push: { productTypes: body },
-      });
-      body["matter"] = await MattersModel.findById({ _id: body.matter }).select(
-        "name _id"
-      );
-      sendOKResponse(res, { newProductType: body });
-    } catch (error) {
-      sendErrorResponse(res, error);
-    }
-  });
-});
-designsRouter.put(
-  "/:designId/:productTypeRef",
-  (req: Request, res: Response) => {
-    singleFileMulter(req, res, async () => {
-      const { designId, productTypeRef } = req.params;
-      if (
-        !mongoose.isValidObjectId(designId) ||
-        !mongoose.isValidObjectId(productTypeRef)
-      )
-        return sendBadRequestResponse(
-          res,
-          "Either one of two params is missing "
-        );
-      //pre validation
-      let design = await ProductModel.findById({
-        _id: designId,
-        "productTypes.productTypeRef": productTypeRef,
-      });
-      let indexToUpdate = -1;
-      try {
-        design.productTypes.forEach((productType, index) => {
-          if (String(productType.productTypeRef) === String(productTypeRef)) {
-            const { colors, matter } = req.body;
-            const image = req.file;
-            const newProductType = {
-              colors,
-              matter,
-              productTypePhoto: image ? image.filename : undefined,
-            };
-            indexToUpdate = index;
-            const oldImageId = productType.productTypePhoto;
-            productType = merge(productType, newProductType);
-            productType.colors = [
-              ...new Set<string>(
-                newProductType.colors.map((item: any) => item.toString())
-              ),
-            ];
-            const gfs = getGFS();
-            if (image != undefined && image.filename != undefined)
-              removeFiles(gfs, [oldImageId]);
-          }
-        });
-        await design.save();
-        design = await design
-          .populate({
-            path: "productTypes.matter",
-            select: "_id name",
-          })
-          .execPopulate();
-        sendOKResponse(res, {
-          newProductType: design.productTypes[indexToUpdate],
-        });
-      } catch (error) {
-        sendErrorResponse(res, error);
-      }
-    });
-  }
-);
 
-designsRouter.put("/:designId", (req: any, res: Response) => {
+productsRouter.put("/:designId", (req: any, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
     const designId = req.params.designId;
@@ -366,42 +241,8 @@ designsRouter.put("/:designId", (req: any, res: Response) => {
     }
   });
 });
-designsRouter.delete(
-  "/:designId/:productTypeRef",
-  async (req: Request, res: Response) => {
-    const { designId, productTypeRef } = req.params;
-    if (
-      !mongoose.isValidObjectId(designId) ||
-      !mongoose.isValidObjectId(productTypeRef)
-    )
-      return sendBadRequestResponse(
-        res,
-        "Either one of two params is missing "
-      );
-    try {
-      const gfs = getGFS();
-      const design = await ProductModel.findById(designId);
-      let imageToDelete = null;
-      const productTypes = design.productTypes
-        .map((item) => {
-          if (item.productTypeRef == productTypeRef)
-            imageToDelete = item.productTypePhoto;
-          return item.productTypeRef;
-        })
-        .filter((item) => productTypeRef !== item);
-      removeFiles(gfs, [imageToDelete]);
-      const newPrice = await getPrice(productTypes);
-      await design.update({
-        totalPrice: newPrice,
-        $pull: { productTypes: { productTypeRef } },
-      });
-      sendOKResponse(res, design);
-    } catch (error) {
-      sendErrorResponse(res, error);
-    }
-  }
-);
-designsRouter.delete(
+
+productsRouter.delete(
   "/:designId",
   [Auth, Artist],
   async (req: any, res: Response) => {
@@ -417,7 +258,6 @@ designsRouter.delete(
         );
       const gfs = getGFS();
       const files = design.designPhotos;
-      design.productTypes.forEach((item) => files.push(item.productTypePhoto));
       files.forEach((file) => {
         gfs.remove({ filename: file, root: "uploads" }, () => console.log);
       });
@@ -433,4 +273,4 @@ designsRouter.delete(
   }
 );
 
-export { designsRouter };
+export { productsRouter };

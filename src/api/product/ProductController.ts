@@ -1,15 +1,13 @@
 import { Request } from "express";
 import { pick } from "lodash";
 import { getGFS } from "../../config/DataBaseConnection";
-import { validateDesign, ProductModel } from "./ProductsModel";
+import { validateProduct, ProductModel } from "./ProductsModel";
 import { removeFiles } from "../../utils/utils";
-import { productTypeModel } from "../product-type/ProductTypeModel";
 import { IProduct } from "./IProduct";
 import { DocumentQuery } from "mongoose";
 export async function createDesign(
   req: Request,
-  files: any,
-  artistId: string
+  files: string[]
 ): Promise<IProduct> {
   return new Promise(async (res, rej) => {
     const body: IProduct = pick(req.body, [
@@ -18,27 +16,21 @@ export async function createDesign(
       "designPhotos",
       "categories",
       "collections",
-      "productTypes",
+      "options",
+      "basePrice",
     ]) as IProduct;
-    body.artistId = artistId;
-    const prodcutTypes: string[] = [];
-    body.designPhotos = files.designPhotos;
-    body.productTypes.map((item, index: number) => {
-      item.productTypePhoto = files.productTypePhotos[index];
-      prodcutTypes.push(item.productTypeRef);
-    });
+    body.designPhotos = files;
     const gfs = getGFS();
     try {
-      const { error } = validateDesign(body);
+      const { error } = validateProduct(body);
       if (error) {
-        removeFiles(gfs, files.allFiles);
+        removeFiles(gfs, files);
         return rej(error.details[0].message);
       }
-      body.totalPrice = await getPrice(prodcutTypes);
       let design = new ProductModel(body);
       const mongoValidation = design.validateSync();
       if (mongoValidation) {
-        removeFiles(gfs, files.allFiles);
+        removeFiles(gfs, files);
         return rej(mongoValidation.message);
       }
       design = await design.save();
@@ -47,16 +39,6 @@ export async function createDesign(
       rej(error);
     }
   });
-}
-async function getPrice(productTypesRefs: string[]) {
-  const productTypes = await productTypeModel.find({
-    _id: { $in: productTypesRefs },
-  });
-  let price = 0;
-  productTypes.forEach((item) => {
-    price += item.price;
-  });
-  return price;
 }
 export const detailsLevel: {
   path: string;
@@ -69,21 +51,6 @@ export const detailsLevel: {
 }[] = [
   { path: "collections", select: "_id name", match: { active: true } },
   { path: "categories", select: "_id name", match: { active: true } },
-  { path: "artistId", select: "_id storeName" },
-  {
-    path: "productTypes.productTypeRef",
-    select: "_id name price",
-  },
-  {
-    path: "productTypes.colors",
-    select: "_id name value",
-    match: { active: true },
-  },
-  {
-    path: "productTypes.matter",
-    select: "_id name",
-    match: { active: true },
-  },
 ];
 export async function getAllDesign(
   limit: number,
@@ -95,27 +62,23 @@ export async function getAllDesign(
   minPrice: number,
   maxPrice: number,
   collectionsFilter: string[],
-  categoriesFilter: string[],
-  colorsFilter: string[],
-  productTypesFilter: string[]
+  categoriesFilter: string[]
 ): Promise<[IProduct[], number]> {
   const filter: {
     name: {
       $regex: string;
       $options: string;
     };
-    totalPrice: {
+    basePrice: {
       $gte: number;
       $lte: number;
     };
     state?: string;
     collections?: { $in: string[] };
     categories?: { $in: string[] };
-    "productTypes.colors"?: { $in: string[] };
-    "productTypes.productTypeRef"?: { $in: string[] };
   } = {
     name: { $regex: q, $options: "i" },
-    totalPrice: {
+    basePrice: {
       $gte: minPrice,
       $lte: maxPrice,
     },
@@ -128,10 +91,6 @@ export async function getAllDesign(
   if (collectionsFilter.length)
     filter["collections"] = { $in: collectionsFilter };
   if (categoriesFilter.length) filter["categories"] = { $in: categoriesFilter };
-  if (colorsFilter.length)
-    filter["productTypes.colors"] = { $in: colorsFilter };
-  if (productTypesFilter.length)
-    filter["productTypes.productTypeRef"] = { $in: productTypesFilter };
   return await Promise.all([
     ProductModel.find(filter)
       .populate(detailsLevel)
