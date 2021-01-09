@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema(
       minlength: 10,
       maxlength: 255,
     },
-    designPhotos: [String],
+    productPhotos: [String],
     basePrice: {
       type: Number,
       min: 0,
@@ -93,10 +93,9 @@ export function validateProduct(product: IProduct): Joi.ValidationResult {
     name: Joi.string().min(3).max(50).required(),
     description: Joi.string().min(10).max(255).required(),
     basePrice: Joi.number().required(),
-    designPhotos: Joi.array().items(Joi.string()).min(1).required(),
+    productPhotos: Joi.array().items(Joi.string()).min(1).required(),
     categories: Joi.array().items(Joi.string()).min(1).required(),
     collections: Joi.array().items(Joi.string()),
-    // options: Joi.array().items(Joi.string()).min(1).required(),
     options: Joi.array()
       .items(
         Joi.object({
