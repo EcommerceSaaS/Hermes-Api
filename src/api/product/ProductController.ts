@@ -9,7 +9,7 @@ import { OptionsModel, OPTIONS_SCHEMA } from "../option/OptionsModel";
 import mongoose from "mongoose";
 import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
-export async function createDesign(
+export async function createProduct(
   req: Request,
   files: string[]
 ): Promise<IProduct> {
@@ -36,14 +36,14 @@ export async function createDesign(
         const options: string[] = (
           await OptionsModel.insertMany(body.options)
         ).map((option) => option._id);
-        let design = new ProductModel({ ...body, options });
-        const mongoValidation = design.validateSync();
+        let product = new ProductModel({ ...body, options });
+        const mongoValidation = product.validateSync();
         if (mongoValidation) {
           removeFiles(gfs, files);
           return rej(mongoValidation.message);
         }
-        design = await design.save();
-        res(design);
+        product = await product.save();
+        res(product);
       });
     } catch (error) {
       rej(error);

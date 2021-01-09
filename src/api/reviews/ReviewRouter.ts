@@ -16,8 +16,8 @@ const reviewsRouter = Router({ mergeParams: true });
 reviewsRouter.get("/", async (req: Request, res: Response) => {
   try {
     let reviews = null;
-    if (req.params.designId) {
-      reviews = await ProductModel.find({ _id: req.params.designId })
+    if (req.params.productId) {
+      reviews = await ProductModel.find({ _id: req.params.productId })
         .select("reviews")
         .populate("reviews")
         .populate({
@@ -32,7 +32,7 @@ reviewsRouter.get("/", async (req: Request, res: Response) => {
         select: { _id: 1, name: 1, profilePhoto: 1 },
       },
       {
-        path: "designId",
+        path: "productId",
         select: { _id: 1, name: 1 },
       },
     ]);
@@ -46,7 +46,7 @@ reviewsRouter.post("/", [Auth], async (req: any, res: Response) => {
     const body: IReview = pick(req.body, [
       "rating",
       "comment",
-      "designId",
+      "productId",
     ]) as IReview;
     const { error } = validateReview(body);
     if (error) return sendBadRequestResponse(res, error.details[0].message);
@@ -57,7 +57,7 @@ reviewsRouter.post("/", [Auth], async (req: any, res: Response) => {
       User.findByIdAndUpdate(req.user.id, {
         $push: { reviews: review._id },
       }),
-      ProductModel.findByIdAndUpdate(body.designId, {
+      ProductModel.findByIdAndUpdate(body.productId, {
         $push: { reviews: review._id },
       }),
     ]);
@@ -84,14 +84,14 @@ reviewsRouter.put("/:reviewId", [Auth], async (req: Request, res: Response) => {
   }
 });
 reviewsRouter.delete(
-  "/:reviewId/:designId",
+  "/:reviewId/:productId",
   [Auth],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (req: any, res: Response) => {
     try {
       if (
         !mongoose.isValidObjectId(req.params.reviewId) ||
-        !mongoose.isValidObjectId(req.params.designId)
+        !mongoose.isValidObjectId(req.params.productId)
       )
         return sendBadRequestResponse(res, "Not a valida review id");
       const review = await reviewModel.findByIdAndDelete(req.params.reviewId);
@@ -99,7 +99,7 @@ reviewsRouter.delete(
         User.findByIdAndUpdate(req.user.id, {
           $pull: { reviews: review._id },
         }),
-        ProductModel.findByIdAndUpdate(req.params.designId, {
+        ProductModel.findByIdAndUpdate(req.params.productId, {
           $pull: { reviews: review._id },
         }),
       ]);

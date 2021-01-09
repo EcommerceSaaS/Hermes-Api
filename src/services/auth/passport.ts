@@ -1,12 +1,10 @@
 import passport from "passport";
-import { facebookStrategy } from "./strategies/FacebookStrategy";
-import { googleStrategy } from "./strategies/GoogleStrategy";
 import {
   userLocalStrategy,
   adminLocalStrategy,
 } from "./strategies/LocalStrategy";
 
-export function initializeAuth() {
+export function initializeAuth(): void {
   passport.serializeUser(function (user, done) {
     done(null, user);
   });
@@ -14,8 +12,7 @@ export function initializeAuth() {
   passport.deserializeUser(function (obj, done) {
     done(null, obj);
   });
-  passport.use("facebook", facebookStrategy);
-  passport.use("google", googleStrategy);
+
   passport.use("local", userLocalStrategy);
   passport.use("admin", adminLocalStrategy);
 }

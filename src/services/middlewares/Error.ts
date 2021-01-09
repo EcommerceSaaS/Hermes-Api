@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { sendErrorResponse } from "../http/Responses";
 export default function (
-  err: any,
+  err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
-) {
+  _next: NextFunction
+): void {
   console.log(err);
   sendErrorResponse(res, err);
 }
