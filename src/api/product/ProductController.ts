@@ -5,6 +5,10 @@ import { validateProduct, ProductModel } from "./ProductsModel";
 import { removeFiles } from "../../utils/utils";
 import { IProduct } from "./IProduct";
 import { DocumentQuery } from "mongoose";
+import { OptionsModel, OPTIONS_SCHEMA } from "../option/OptionsModel";
+import mongoose from "mongoose";
+import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
+import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
 export async function createDesign(
   req: Request,
   files: string[]
@@ -13,30 +17,38 @@ export async function createDesign(
     const body: IProduct = pick(req.body, [
       "name",
       "description",
-      "designPhotos",
+      "productPhotos",
       "categories",
       "collections",
       "options",
       "basePrice",
     ]) as IProduct;
-    body.designPhotos = files;
+    body.productPhotos = files;
     const gfs = getGFS();
+    const session = mongoose.startSession();
     try {
       const { error } = validateProduct(body);
       if (error) {
         removeFiles(gfs, files);
         return rej(error.details[0].message);
       }
-      let design = new ProductModel(body);
-      const mongoValidation = design.validateSync();
-      if (mongoValidation) {
-        removeFiles(gfs, files);
-        return rej(mongoValidation.message);
-      }
-      design = await design.save();
-      res(design);
+      (await session).withTransaction(async () => {
+        const options: string[] = (
+          await OptionsModel.insertMany(body.options)
+        ).map((option) => option._id);
+        let design = new ProductModel({ ...body, options });
+        const mongoValidation = design.validateSync();
+        if (mongoValidation) {
+          removeFiles(gfs, files);
+          return rej(mongoValidation.message);
+        }
+        design = await design.save();
+        res(design);
+      });
     } catch (error) {
       rej(error);
+    } finally {
+      (await session).endSession();
     }
   });
 }
@@ -49,10 +61,11 @@ export const detailsLevel: {
   limit?: number;
   populate?: { path: string; select: string };
 }[] = [
-  { path: "collections", select: "_id name", match: { active: true } },
-  { path: "categories", select: "_id name", match: { active: true } },
+  { path: COLLECTIONS_SCHEMA, select: "_id name", match: { active: true } },
+  { path: CATEGORIES_SCHEMA, select: "_id name", match: { active: true } },
+  { path: OPTIONS_SCHEMA, select: "_id name values" },
 ];
-export async function getAllDesign(
+export async function getAllProducts(
   limit: number,
   page: number,
   sort: number,
@@ -86,11 +99,11 @@ export async function getAllDesign(
   const sortParams: { totalPrice?: number; createdAt?: number } = {};
   if (sortByPrice) sortParams["totalPrice"] = sortByPrice;
   if (sort) sortParams["createdAt"] = sort;
-
   if (state) filter["state"] = state;
   if (collectionsFilter.length)
     filter["collections"] = { $in: collectionsFilter };
   if (categoriesFilter.length) filter["categories"] = { $in: categoriesFilter };
+
   return await Promise.all([
     ProductModel.find(filter)
       .populate(detailsLevel)
@@ -100,7 +113,7 @@ export async function getAllDesign(
     ProductModel.countDocuments(filter),
   ]);
 }
-export async function getDesignbyId(
+export async function getProductbyId(
   desginId: string
 ): DocumentQuery<IProduct, IProduct, unknown> {
   return await ProductModel.findById({ _id: desginId }).populate(detailsLevel);
