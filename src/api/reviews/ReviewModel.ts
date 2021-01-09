@@ -13,9 +13,9 @@ const reviewSchema = new mongoose.Schema(
         message: `ObjectId is Not valid`,
       },
     },
-    designId: {
+    productId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Designs",
+      ref: "products",
       validate: {
         validator,
         message: `ObjectId is Not valid`,
@@ -43,7 +43,7 @@ export function validateReview(review: IReview): Joi.ValidationResult {
   const schema = Joi.object({
     rating: Joi.number().min(0).max(5).required(),
     comment: Joi.string().min(0).max(255).required(),
-    designId: Joi.string().required(),
+    productId: Joi.string().required(),
   });
   return schema.validate(review);
 }

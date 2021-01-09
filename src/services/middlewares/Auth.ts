@@ -5,11 +5,15 @@ import {
   sendBadRequestResponse,
 } from "../http/Responses";
 
-export default function (req: Request, res: Response, next: NextFunction) {
+export default function (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const token = req.header("x-auth-token");
   if (!token) return sendForbiddenResponse(res);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY!!);
+    const decoded = jwt.verify(token, process.env.JWT_PRIVATE_KEY);
     req.user = decoded;
     next();
   } catch (error) {

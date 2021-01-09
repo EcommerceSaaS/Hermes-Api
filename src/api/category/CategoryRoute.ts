@@ -78,7 +78,7 @@ categoriesRouter.post("/", (req: Request, res: Response) => {
   });
 });
 categoriesRouter.delete("/:categoryId", async (req: Request, res: Response) => {
-  const categoryId = req.params.categoryId;
+  const { categoryId } = req.params;
   if (!mongoose.isValidObjectId(categoryId)) {
     return sendBadRequestResponse(res, "not a valid objectId");
   }
@@ -92,7 +92,7 @@ categoriesRouter.delete("/:categoryId", async (req: Request, res: Response) => {
 categoriesRouter.put("/:categoryId", (req: Request, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
-    const categoryId = req.params.categoryId;
+    const { categoryId } = req.params;
     if (!mongoose.isValidObjectId(categoryId)) {
       return sendBadRequestResponse(res, "not a valid objectId");
     }
@@ -108,9 +108,6 @@ categoriesRouter.put("/:categoryId", (req: Request, res: Response) => {
             console.log(err)
           );
         }
-        // if (body.productTypes) {
-        //   category.productTypes = body.productTypes;
-        // }
         category = merge(category, body);
         await category.save();
         sendOKResponse(res, category);

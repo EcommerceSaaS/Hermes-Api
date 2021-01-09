@@ -10,11 +10,10 @@ import {
 } from "../../services/http/Responses";
 import { extractFilesFromRequestArray, routesFactory } from "../../utils/utils";
 import {
-  createDesign,
+  createProduct,
   getAllProducts,
   getProductbyId,
   detailsLevel,
-  getDesignWithReviews,
 } from "./ProductController";
 import { ProductModel } from "./ProductsModel";
 import { IProduct } from "./IProduct";
@@ -27,7 +26,7 @@ import { IOption } from "../option/IOption";
 
 const multer = getMulterArray(8);
 const productsRouter = Router({ mergeParams: true });
-productsRouter.use("/:designId/reviews", reviewsRouter);
+productsRouter.use("/:productId/reviews", reviewsRouter);
 productsRouter.post("/", [], async (req: any, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
@@ -35,8 +34,8 @@ productsRouter.post("/", [], async (req: any, res: Response) => {
     if (!files.length)
       return sendBadRequestResponse(res, "Each product has to have images");
     try {
-      const design = await createDesign(req, files);
-      sendCreatedResponse(res, design);
+      const product = await createProduct(req, files);
+      sendCreatedResponse(res, product);
     } catch (error) {
       if (err instanceof Error) return sendErrorResponse(res, error);
       sendBadRequestResponse(res, error);
@@ -112,13 +111,13 @@ productsRouter.get("/", async (req: Request, res: Response) => {
         name: { $regex: q, $options: "i" },
       };
       if (categories.length) filter["categories"] = { $in: categories };
-      const designs = await ProductModel.find(filter)
+      const products = await ProductModel.find(filter)
         .populate(detailsLevel)
         .limit(limit)
         .skip(limit * (page - 1));
-      return sendOKResponse(res, designs);
+      return sendOKResponse(res, products);
     }
-    const result = await getAllProducts(
+    const [products, count] = await getAllProducts(
       limit,
       page,
       sort,
@@ -131,9 +130,9 @@ productsRouter.get("/", async (req: Request, res: Response) => {
       categories
     );
     sendOKResponse(res, {
-      designs: result[0],
-      count: result[1],
-      nbPages: Math.ceil(result[1] / limit),
+      products,
+      count: count,
+      nbPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log(error);
@@ -144,11 +143,11 @@ productsRouter.get("/:productId", async (req: Request, res: Response) => {
   const { productId } = req.params;
   //userID for design of a certain user
   if (!productId || !mongoose.isValidObjectId(productId))
-    return sendBadRequestResponse(res, "design id not valid");
+    return sendBadRequestResponse(res, "product id not valid");
 
   try {
-    const design = await getProductbyId(productId);
-    sendOKResponse(res, design);
+    const product = await getProductbyId(productId);
+    sendOKResponse(res, product);
   } catch (error) {
     sendErrorResponse(res, error);
   }
@@ -158,7 +157,7 @@ productsRouter.put("/:productId", (req: Request, res: Response) => {
     if (err) return sendErrorResponse(res, err);
     const { productId } = req.params;
     if (!mongoose.isValidObjectId(productId))
-      return sendBadRequestResponse(res, "Design id not valid");
+      return sendBadRequestResponse(res, "product id not valid");
     //just checking for
     const body: any = pick(req.body, [
       "name",
@@ -200,7 +199,7 @@ productsRouter.put("/:productId", (req: Request, res: Response) => {
           );
         });
         sendOKResponse(res, newProduct);
-      } else sendBadRequestResponse(res, "There's no design with such Id");
+      } else sendBadRequestResponse(res, "There's no product with such Id");
     } catch (error) {
       sendErrorResponse(res, error);
     }
@@ -239,7 +238,7 @@ productsRouter.delete(
   async (req: Request, res: Response) => {
     const { productId } = req.params;
     if (!productId || !mongoose.isValidObjectId(productId))
-      return sendBadRequestResponse(res, "design id not valid");
+      return sendBadRequestResponse(res, "product id not valid");
     try {
       const product: IProduct = await ProductModel.findByIdAndDelete(productId);
       if (!product)
@@ -266,7 +265,7 @@ productsRouter.delete(
     const session = mongoose.startSession();
     try {
       (await session).withTransaction(async () => {
-        const [design] = await Promise.all([
+        const [product] = await Promise.all([
           ProductModel.findByIdAndUpdate(
             { _id: productId },
             { $pull: { options: optionId } },
@@ -274,7 +273,7 @@ productsRouter.delete(
           ),
           OptionsModel.findByIdAndDelete({ _id: optionId }),
         ]);
-        sendOKResponse(res, design);
+        sendOKResponse(res, product);
       });
     } catch (error) {
       sendErrorResponse(res, error);

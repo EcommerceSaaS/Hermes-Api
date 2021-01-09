@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import {
   sendBadRequestResponse,
+  sendCreatedResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
 import { pick } from "lodash";
@@ -15,7 +16,7 @@ optionsRouter.post("/", async (req: Request, res: Response) => {
     if (error) sendBadRequestResponse(res, error.details[0].message);
     let option = new OptionsModel(body);
     option = await option.save();
-    sendOKResponse(res, option);
+    sendCreatedResponse(res, option);
   });
 });
 optionsRouter.get("/", (req: Request, res: Response) => {
