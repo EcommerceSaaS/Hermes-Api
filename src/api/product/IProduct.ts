@@ -3,7 +3,7 @@ import { Document } from "mongoose";
 export interface IProduct extends Document {
   name: string;
   description: string;
-  designPhotos: string[];
+  productPhotos: string[];
   categories: string[];
   collections: string[];
   artistId: string;

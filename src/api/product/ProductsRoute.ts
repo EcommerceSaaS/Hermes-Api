@@ -8,25 +8,22 @@ import {
   sendCreatedResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
-import {
-  extractFilesFromRequestArray,
-  extractFilesFromRequestDesign,
-} from "../../utils/utils";
+import { extractFilesFromRequestArray, routesFactory } from "../../utils/utils";
 import {
   createDesign,
-  getAllDesign,
-  getDesignbyId,
+  getAllProducts,
+  getProductbyId,
   detailsLevel,
   getDesignWithReviews,
 } from "./ProductController";
 import { ProductModel } from "./ProductsModel";
-import { IProduct as IDesign } from "./IProduct";
+import { IProduct } from "./IProduct";
 import { getGFS } from "../../config/DataBaseConnection";
-import Auth from "../../services/middlewares/Auth";
-import Artist from "../../services/middlewares/Artist";
 import { User } from "../users/UserModel";
 import { pick, merge, uniqWith, isEqual } from "lodash";
 import { reviewsRouter } from "../reviews/ReviewRouter";
+import { OptionsModel, validateOption } from "../option/OptionsModel";
+import { IOption } from "../option/IOption";
 
 const multer = getMulterArray(8);
 const productsRouter = Router({ mergeParams: true });
@@ -121,7 +118,7 @@ productsRouter.get("/", async (req: Request, res: Response) => {
         .skip(limit * (page - 1));
       return sendOKResponse(res, designs);
     }
-    const result = await getAllDesign(
+    const result = await getAllProducts(
       limit,
       page,
       sort,
@@ -143,46 +140,24 @@ productsRouter.get("/", async (req: Request, res: Response) => {
     sendErrorResponse(res, error);
   }
 });
-productsRouter.get(
-  "/designDetails/:designId",
-  async (req: Request, res: Response) => {
-    const { designId } = req.params;
-    if (!mongoose.isValidObjectId(designId))
-      return sendBadRequestResponse(res, "Not a valid design Id !");
-    try {
-      const design = await getDesignWithReviews(designId);
-      const collections = design.collections;
-      const similiarDesigns = await ProductModel.find({
-        _id: { $ne: designId },
-        collections: {
-          $in: collections,
-        },
-      });
-      sendOKResponse(res, { design, similiarDesigns });
-    } catch (error) {
-      sendErrorResponse(res, error);
-    }
-  }
-);
-productsRouter.get("/:designId", async (req: Request, res: Response) => {
-  const designId = req.params.designId;
+productsRouter.get("/:productId", async (req: Request, res: Response) => {
+  const { productId } = req.params;
   //userID for design of a certain user
-  if (!designId || !mongoose.isValidObjectId(designId))
+  if (!productId || !mongoose.isValidObjectId(productId))
     return sendBadRequestResponse(res, "design id not valid");
 
   try {
-    const design = await getDesignbyId(designId);
+    const design = await getProductbyId(productId);
     sendOKResponse(res, design);
   } catch (error) {
     sendErrorResponse(res, error);
   }
 });
-
-productsRouter.put("/:designId", (req: any, res: Response) => {
+productsRouter.put("/:productId", (req: Request, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
-    const designId = req.params.designId;
-    if (!mongoose.isValidObjectId(designId))
+    const { productId } = req.params;
+    if (!mongoose.isValidObjectId(productId))
       return sendBadRequestResponse(res, "Design id not valid");
     //just checking for
     const body: any = pick(req.body, [
@@ -191,84 +166,120 @@ productsRouter.put("/:designId", (req: any, res: Response) => {
       "categories",
       "collections",
       "state",
-      "designPhotostoDelete",
+      "productPhotostoDelete",
+      "basePrice",
     ]);
-    const files = extractFilesFromRequestDesign(req);
-    if (files.designPhotos.length) {
-      files.designPhotos.forEach(
-        (item: { filename: string }, index: number) => {
-          files.designPhotos[index] = item.filename;
-        }
-      );
-      body.designPhotos = files.designPhotos;
-    }
-    if (files.productTypePhotos.length) {
-      files.productTypePhotos.forEach(
-        (item: { filename: string }, index: number) => {
-          files.productTypePhotos[index] = item.filename;
-        }
-      );
+    const files = extractFilesFromRequestArray(req);
+    if (files.length) {
+      files.forEach((filename: string, index: number) => {
+        files[index] = filename;
+      });
+      body.productPhotos = files;
     }
     try {
       const gfs = getGFS();
-
-      let design = await ProductModel.findById(designId);
-      if (design) {
+      let product = await ProductModel.findById(productId);
+      if (product) {
         let filesToDelete: string[] = [];
-        if (body.designPhotostoDelete) {
-          filesToDelete = [...body.designPhotostoDelete];
-          design.designPhotos = design.designPhotos.filter((item) => {
-            return !body.designPhotostoDelete.includes(item);
+        if (body.productPhotostoDelete) {
+          filesToDelete = [...body.productPhotostoDelete];
+          product.productPhotos = product.productPhotos.filter((item) => {
+            return !body.productPhotostoDelete.includes(item);
           });
         }
-        body.designPhotos = [...files.designPhotos, ...design.designPhotos];
-        design = merge(design, body);
-        const newDesign = await ProductModel.findByIdAndUpdate(
-          design._id,
-          design,
+        body.productPhotos = [...files, ...product.productPhotos];
+        product = merge(product, body);
+        const newProduct = await ProductModel.findByIdAndUpdate(
+          product._id,
+          product,
           { new: true }
         );
-
         filesToDelete.forEach((item: string) => {
           gfs.remove({ filename: item, root: "uploads" }, (err) =>
             console.log(err)
           );
         });
-        sendOKResponse(res, newDesign);
+        sendOKResponse(res, newProduct);
       } else sendBadRequestResponse(res, "There's no design with such Id");
     } catch (error) {
       sendErrorResponse(res, error);
     }
   });
 });
+productsRouter.put(
+  "/:productId/options",
+  async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const session = mongoose.startSession();
+    try {
+      (await session).withTransaction(async () => {
+        const body: IOption = pick(req.body, ["name", "values"]) as IOption;
+        const { error } = validateOption(body);
+        if (error) sendBadRequestResponse(res, error.details[0].message);
+        let option = new OptionsModel(body);
+        option = await option.save();
+        const product = await ProductModel.findByIdAndUpdate(
+          { _id: productId },
+          { $push: { options: option._id } },
+          { new: true }
+        );
+        sendOKResponse(res, product);
+      });
+    } catch (error) {
+      sendErrorResponse(res, error);
+    } finally {
+      (await session).endSession();
+    }
+  }
+);
 
 productsRouter.delete(
-  "/:designId",
-  [Auth, Artist],
-  async (req: any, res: Response) => {
-    const designId = req.params.designId;
-    if (!designId || !mongoose.isValidObjectId(designId))
+  "/:productId",
+  [],
+  async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    if (!productId || !mongoose.isValidObjectId(productId))
       return sendBadRequestResponse(res, "design id not valid");
     try {
-      const design: IDesign = await ProductModel.findByIdAndDelete(designId);
-      if (!design)
+      const product: IProduct = await ProductModel.findByIdAndDelete(productId);
+      if (!product)
         return sendBadRequestResponse(
           res,
-          "Design with this id does not exist"
+          "product with this id does not exist"
         );
       const gfs = getGFS();
-      const files = design.designPhotos;
+      const files = product.productPhotos;
       files.forEach((file) => {
         gfs.remove({ filename: file, root: "uploads" }, () => console.log);
       });
-      await User.findByIdAndUpdate(req.user.id, {
-        $pull: {
-          designs: designId,
-        },
-      });
-      sendOKResponse(res, design);
+      sendOKResponse(res, product);
     } catch (error) {
       sendErrorResponse(res, error);
+    }
+  }
+);
+
+productsRouter.delete(
+  "/:productId/:optionId",
+  async (req: Request, res: Response) => {
+    const { productId, optionId } = req.params;
+    const session = mongoose.startSession();
+    try {
+      (await session).withTransaction(async () => {
+        const [design] = await Promise.all([
+          ProductModel.findByIdAndUpdate(
+            { _id: productId },
+            { $pull: { options: optionId } },
+            { new: true }
+          ),
+          OptionsModel.findByIdAndDelete({ _id: optionId }),
+        ]);
+        sendOKResponse(res, design);
+      });
+    } catch (error) {
+      sendErrorResponse(res, error);
+    } finally {
+      (await session).endSession();
     }
   }
 );
