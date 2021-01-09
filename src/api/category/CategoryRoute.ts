@@ -108,9 +108,9 @@ categoriesRouter.put("/:categoryId", (req: Request, res: Response) => {
             console.log(err)
           );
         }
-        if (body.productTypes) {
-          category.productTypes = body.productTypes;
-        }
+        // if (body.productTypes) {
+        //   category.productTypes = body.productTypes;
+        // }
         category = merge(category, body);
         await category.save();
         sendOKResponse(res, category);

@@ -29,7 +29,7 @@ export async function getTotalPriceWithDiscount(
             result.add(updateDesignPrice(code, design));
             if (code.kind === "PROMOCODE") promoCodeApplied = true;
           } else {
-            design.priceAfterReduction = design.totalPrice;
+            design.priceAfterReduction = design.basePrice;
             result.add(design);
           }
         }
@@ -41,13 +41,13 @@ export async function getTotalPriceWithDiscount(
 }
 function updateDesignPrice(code: ICode, design: IProduct) {
   if (!design.priceAfterReduction)
-    design.priceAfterReduction = design.totalPrice;
+    design.priceAfterReduction = design.basePrice;
   switch (code.type) {
     case "Amount":
       design.priceAfterReduction -= code.amount;
       break;
     case "Percentage":
-      design.priceAfterReduction -= (code.amount * design.totalPrice) / 100;
+      design.priceAfterReduction -= (code.amount * design.basePrice) / 100;
       break;
   }
   return design;
