@@ -5,6 +5,8 @@ import { validateProduct, ProductModel } from "./ProductsModel";
 import { removeFiles } from "../../utils/utils";
 import { IProduct } from "./IProduct";
 import { DocumentQuery } from "mongoose";
+import { OptionsModel } from "../option/OptionsModel";
+import mongoose from "mongoose";
 export async function createDesign(
   req: Request,
   files: string[]
@@ -22,19 +24,25 @@ export async function createDesign(
     body.designPhotos = files;
     const gfs = getGFS();
     try {
+      const session = mongoose.startSession();
       const { error } = validateProduct(body);
       if (error) {
         removeFiles(gfs, files);
         return rej(error.details[0].message);
       }
-      let design = new ProductModel(body);
-      const mongoValidation = design.validateSync();
-      if (mongoValidation) {
-        removeFiles(gfs, files);
-        return rej(mongoValidation.message);
-      }
-      design = await design.save();
-      res(design);
+      (await session).withTransaction(async () => {
+        const options: string[] = (
+          await OptionsModel.insertMany(body.options)
+        ).map((option) => option._id);
+        let design = new ProductModel({ ...body, options });
+        const mongoValidation = design.validateSync();
+        if (mongoValidation) {
+          removeFiles(gfs, files);
+          return rej(mongoValidation.message);
+        }
+        design = await design.save();
+        res(design);
+      });
     } catch (error) {
       rej(error);
     }
