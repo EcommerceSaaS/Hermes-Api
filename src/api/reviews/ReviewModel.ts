@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { IReview } from "./IReview";
 import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
+import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
 export const REVIEWS_SCHEMA = "reviews";
 const reviewSchema = new mongoose.Schema(
   {
