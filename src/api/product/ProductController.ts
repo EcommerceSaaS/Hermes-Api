@@ -33,10 +33,19 @@ export async function createProduct(
         return rej(error.details[0].message);
       }
       (await session).withTransaction(async () => {
-        const options: string[] = (
-          await OptionsModel.insertMany(body.options)
+        const optionIds: string[] = body.options.filter(
+          (option) => typeof option === "string"
+        );
+        const options = body.options.filter(
+          (option) => typeof option !== "string"
+        );
+        const newOptions: string[] = (
+          await OptionsModel.insertMany(options)
         ).map((option) => option._id);
-        let product = new ProductModel({ ...body, options });
+        let product = new ProductModel({
+          ...body,
+          options: [...optionIds, ...newOptions],
+        });
         const mongoValidation = product.validateSync();
         if (mongoValidation) {
           removeFiles(gfs, files);

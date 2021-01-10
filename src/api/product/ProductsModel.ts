@@ -98,18 +98,21 @@ export function validateProduct(product: IProduct): Joi.ValidationResult {
     collections: Joi.array().items(Joi.string()),
     options: Joi.array()
       .items(
-        Joi.object({
-          name: Joi.string().required(),
-          values: Joi.array()
-            .items(
-              Joi.object({
-                name: Joi.string().required(),
-                price: Joi.number().required(),
-              })
-            )
-            .min(1)
-            .required(),
-        })
+        Joi.alternatives(
+          Joi.string(),
+          Joi.object({
+            name: Joi.string().required(),
+            values: Joi.array()
+              .items(
+                Joi.object({
+                  name: Joi.string().required(),
+                  price: Joi.number().required(),
+                })
+              )
+              .min(1)
+              .required(),
+          })
+        )
       )
       .required(),
   });
