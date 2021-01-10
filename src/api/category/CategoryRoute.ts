@@ -10,28 +10,21 @@ import {
 import mongoose from "mongoose";
 import { pick, merge } from "lodash";
 import { validateCategory, Category } from "./CategoryModel";
-import { productTypeRouter } from "../product-type/ProductTypeRouter";
 import { getGFS } from "../../config/DataBaseConnection";
-import { designsRouter } from "../product/ProductsRoute";
-import { PRODUCT_TYPES_SCHEMA } from "../product-type/ProductTypeModel";
+import { productsRouter } from "../product/ProductsRoute";
 import { ICategory } from "./ICategory";
 
 const categoriesRouter = Router({ mergeParams: true });
 const multer = getMulterSingle();
 
-categoriesRouter.use("/:categoryId/productTypes", productTypeRouter);
-categoriesRouter.use("/:categoryId/designs", designsRouter);
+categoriesRouter.use("/:categoryId/products", productsRouter);
 categoriesRouter.get("/", async (req: Request, res: Response) => {
   try {
     const filter = req.query.active
       ? { active: JSON.parse(req.query.active) }
       : {};
     const [categories, count] = await Promise.all([
-      await Category.find(filter).populate({
-        path: PRODUCT_TYPES_SCHEMA,
-        match: { active: true },
-        select: { _id: 1, name: 1 },
-      }),
+      await Category.find(filter),
       await Category.countDocuments(filter),
     ]);
     sendOKResponse(res, {
@@ -49,11 +42,7 @@ categoriesRouter.get("/:categoryId", async (req: Request, res: Response) => {
     return sendBadRequestResponse(res, "not a valid objectId");
   }
   try {
-    const category = await Category.findById(categoryId).populate({
-      path: PRODUCT_TYPES_SCHEMA,
-      match: { active: true },
-      select: { _id: 1, name: 1 },
-    });
+    const category = await Category.findById(categoryId);
     sendOKResponse(res, category);
   } catch (error) {
     sendErrorResponse(res, error);
@@ -68,10 +57,7 @@ categoriesRouter.post("/", (req: Request, res: Response) => {
     if (!file) {
       return sendBadRequestResponse(res, "At least one image is required");
     }
-    const body: ICategory = pick(req.body, [
-      "name",
-      "productTypes",
-    ]) as ICategory;
+    const body: ICategory = pick(req.body, ["name"]) as ICategory;
     const { error } = validateCategory(body);
     if (error) {
       return sendBadRequestResponse(res, error.details[0].message);
@@ -92,7 +78,7 @@ categoriesRouter.post("/", (req: Request, res: Response) => {
   });
 });
 categoriesRouter.delete("/:categoryId", async (req: Request, res: Response) => {
-  const categoryId = req.params.categoryId;
+  const { categoryId } = req.params;
   if (!mongoose.isValidObjectId(categoryId)) {
     return sendBadRequestResponse(res, "not a valid objectId");
   }
@@ -106,16 +92,12 @@ categoriesRouter.delete("/:categoryId", async (req: Request, res: Response) => {
 categoriesRouter.put("/:categoryId", (req: Request, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
-    const categoryId = req.params.categoryId;
+    const { categoryId } = req.params;
     if (!mongoose.isValidObjectId(categoryId)) {
       return sendBadRequestResponse(res, "not a valid objectId");
     }
     try {
-      const body: ICategory = pick(req.body, [
-        "name",
-        "productTypes",
-        "active",
-      ]) as ICategory;
+      const body: ICategory = pick(req.body, ["name", "active"]) as ICategory;
       const file = req.file;
       const gfs = getGFS();
       let category = await Category.findById(categoryId);
@@ -125,9 +107,6 @@ categoriesRouter.put("/:categoryId", (req: Request, res: Response) => {
           gfs.remove({ filename: category.pubPhoto, root: "uploads" }, (err) =>
             console.log(err)
           );
-        }
-        if (body.productTypes) {
-          category.productTypes = body.productTypes;
         }
         category = merge(category, body);
         await category.save();

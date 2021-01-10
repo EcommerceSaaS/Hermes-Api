@@ -48,7 +48,7 @@ ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
     if (!results[0].length) {
       designs = results[1];
       designs.forEach((item, index) => {
-        totalPrice += item.totalPrice * quatities[index];
+        totalPrice += item.basePrice * quatities[index];
       });
     } else {
       designs = await getTotalPriceWithDiscount(results[1], results[0]);

@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import g from "gridfs-stream";
 import Joi from "@hapi/joi";
-import { IProductTypeDesign } from "../api/product/IProduct";
+import { Response } from "express";
+import { sendErrorResponse } from "../services/http/Responses";
 export function extractFilesFromRequestFields(req: any) {
   const profilePhotoFile = req.files.profilePicture
     ? req.files.profilePicture[0]
@@ -49,13 +50,10 @@ export function removeFiles(gfs: g.Grid, fileNamesArray: string[]) {
 export function validator(v: any): boolean {
   return mongoose.isValidObjectId(v);
 }
-export function validateDesignProductType(
-  productType: IProductTypeDesign
-): Joi.ValidationResult {
-  const schema = Joi.object({
-    productTypeRef: Joi.string().required(),
-    matter: Joi.string().required(),
-    colors: Joi.array().items(Joi.string()).required(),
-  });
-  return schema.validate(productType);
+export function routesFactory(res: Response, route: () => void): void {
+  try {
+    route();
+  } catch (error) {
+    sendErrorResponse(res, error);
+  }
 }

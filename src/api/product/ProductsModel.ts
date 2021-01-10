@@ -3,15 +3,13 @@ import { IProduct } from "./IProduct";
 import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
-import { PRODUCT_TYPES_SCHEMA } from "../product-type/ProductTypeModel";
-import { MATTERS_SCHEMA } from "../matters/MatterModel";
-import { COLORS_SCHEMA } from "../colors/ColorModel";
 import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
 import { USERS_SCHEMA } from "../users/UserModel";
 import { REVIEWS_SCHEMA } from "../reviews/ReviewModel";
-const designStates = ["inactive", "active", "archived"];
-export const DESIGNS_SCHEMA = "Designs";
-const designSchema = new mongoose.Schema(
+import { OPTIONS_SCHEMA } from "../option/OptionsModel";
+const productStates = ["inactive", "active", "archived"];
+export const PRODUCTS_SCHEMA = "products";
+const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -24,15 +22,15 @@ const designSchema = new mongoose.Schema(
       minlength: 10,
       maxlength: 255,
     },
-    designPhotos: [String],
-    totalPrice: {
+    productPhotos: [String],
+    basePrice: {
       type: Number,
       min: 0,
       required: true,
     },
     state: {
       type: String,
-      enum: designStates,
+      enum: productStates,
       default: "inactive",
       required: true,
     },
@@ -56,56 +54,22 @@ const designSchema = new mongoose.Schema(
         },
       },
     ],
-    productTypes: [
-      new mongoose.Schema(
-        {
-          productTypeRef: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: PRODUCT_TYPES_SCHEMA,
-            validate: {
-              validator,
-              message: `ObjectId is Not valid`,
-            },
-          },
-          matter: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: MATTERS_SCHEMA,
-            validate: {
-              validator,
-              message: `ObjectId is Not valid`,
-            },
-          },
-          colors: [
-            {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: COLORS_SCHEMA,
-              validate: {
-                validator,
-                message: `ObjectId is Not valid`,
-              },
-            },
-          ],
-          productTypePhoto: {
-            type: String,
-            required: true,
-          },
+    options: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: OPTIONS_SCHEMA,
+        validate: {
+          validator,
+          message: `ObjectId is Not valid`,
         },
-        { _id: false }
-      ),
+      },
     ],
     numberOfOrders: {
       type: Number,
       default: 0,
       min: 0,
     },
-    artistId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: USERS_SCHEMA,
-      validate: {
-        validator,
-        message: `ObjectId is Not valid`,
-      },
-    },
+
     reviews: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -119,27 +83,38 @@ const designSchema = new mongoose.Schema(
   },
   { timestamps: true, versionKey: false }
 );
-export const ProductModel = mongoose.model<IProduct>("Designs", designSchema);
+export const ProductModel = mongoose.model<IProduct>(
+  PRODUCTS_SCHEMA,
+  productSchema
+);
 
-export function validateDesign(design: IProduct): Joi.ValidationResult {
+export function validateProduct(product: IProduct): Joi.ValidationResult {
   const schema = Joi.object({
     name: Joi.string().min(3).max(50).required(),
     description: Joi.string().min(10).max(255).required(),
-    designPhotos: Joi.array().items(Joi.string()).min(1).required(),
+    basePrice: Joi.number().required(),
+    productPhotos: Joi.array().items(Joi.string()).min(1).required(),
     categories: Joi.array().items(Joi.string()).min(1).required(),
-    artistId: Joi.any().required(),
     collections: Joi.array().items(Joi.string()),
-    productTypes: Joi.array()
+    options: Joi.array()
       .items(
-        Joi.object({
-          productTypeRef: Joi.string().required(),
-          matter: Joi.string().required(),
-          productTypePhoto: Joi.string().required(),
-          colors: Joi.array().items(Joi.string()).min(1),
-        })
+        Joi.alternatives(
+          Joi.string(),
+          Joi.object({
+            name: Joi.string().required(),
+            values: Joi.array()
+              .items(
+                Joi.object({
+                  name: Joi.string().required(),
+                  price: Joi.number().required(),
+                })
+              )
+              .min(1)
+              .required(),
+          })
+        )
       )
-      .min(1)
       .required(),
   });
-  return schema.validate(design);
+  return schema.validate(product);
 }

@@ -1,62 +1,65 @@
 import { Request } from "express";
 import { pick } from "lodash";
 import { getGFS } from "../../config/DataBaseConnection";
-import { validateDesign, ProductModel } from "./ProductsModel";
+import { validateProduct, ProductModel } from "./ProductsModel";
 import { removeFiles } from "../../utils/utils";
-import { productTypeModel } from "../product-type/ProductTypeModel";
 import { IProduct } from "./IProduct";
 import { DocumentQuery } from "mongoose";
-export async function createDesign(
+import { OptionsModel, OPTIONS_SCHEMA } from "../option/OptionsModel";
+import mongoose from "mongoose";
+import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
+import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
+export async function createProduct(
   req: Request,
-  files: any,
-  artistId: string
+  files: string[]
 ): Promise<IProduct> {
   return new Promise(async (res, rej) => {
     const body: IProduct = pick(req.body, [
       "name",
       "description",
-      "designPhotos",
+      "productPhotos",
       "categories",
       "collections",
-      "productTypes",
+      "options",
+      "basePrice",
     ]) as IProduct;
-    body.artistId = artistId;
-    const prodcutTypes: string[] = [];
-    body.designPhotos = files.designPhotos;
-    body.productTypes.map((item, index: number) => {
-      item.productTypePhoto = files.productTypePhotos[index];
-      prodcutTypes.push(item.productTypeRef);
-    });
+    body.productPhotos = files;
     const gfs = getGFS();
+    const session = mongoose.startSession();
     try {
-      const { error } = validateDesign(body);
+      const { error } = validateProduct(body);
       if (error) {
-        removeFiles(gfs, files.allFiles);
+        removeFiles(gfs, files);
         return rej(error.details[0].message);
       }
-      body.totalPrice = await getPrice(prodcutTypes);
-      let design = new ProductModel(body);
-      const mongoValidation = design.validateSync();
-      if (mongoValidation) {
-        removeFiles(gfs, files.allFiles);
-        return rej(mongoValidation.message);
-      }
-      design = await design.save();
-      res(design);
+      (await session).withTransaction(async () => {
+        const optionIds: string[] = body.options.filter(
+          (option) => typeof option === "string"
+        );
+        const options = body.options.filter(
+          (option) => typeof option !== "string"
+        );
+        const newOptions: string[] = (
+          await OptionsModel.insertMany(options)
+        ).map((option) => option._id);
+        let product = new ProductModel({
+          ...body,
+          options: [...optionIds, ...newOptions],
+        });
+        const mongoValidation = product.validateSync();
+        if (mongoValidation) {
+          removeFiles(gfs, files);
+          return rej(mongoValidation.message);
+        }
+        product = await product.save();
+        res(product);
+      });
     } catch (error) {
       rej(error);
+    } finally {
+      (await session).endSession();
     }
   });
-}
-async function getPrice(productTypesRefs: string[]) {
-  const productTypes = await productTypeModel.find({
-    _id: { $in: productTypesRefs },
-  });
-  let price = 0;
-  productTypes.forEach((item) => {
-    price += item.price;
-  });
-  return price;
 }
 export const detailsLevel: {
   path: string;
@@ -67,25 +70,11 @@ export const detailsLevel: {
   limit?: number;
   populate?: { path: string; select: string };
 }[] = [
-  { path: "collections", select: "_id name", match: { active: true } },
-  { path: "categories", select: "_id name", match: { active: true } },
-  { path: "artistId", select: "_id storeName" },
-  {
-    path: "productTypes.productTypeRef",
-    select: "_id name price",
-  },
-  {
-    path: "productTypes.colors",
-    select: "_id name value",
-    match: { active: true },
-  },
-  {
-    path: "productTypes.matter",
-    select: "_id name",
-    match: { active: true },
-  },
+  { path: COLLECTIONS_SCHEMA, select: "_id name", match: { active: true } },
+  { path: CATEGORIES_SCHEMA, select: "_id name", match: { active: true } },
+  { path: OPTIONS_SCHEMA, select: "_id name values" },
 ];
-export async function getAllDesign(
+export async function getAllProducts(
   limit: number,
   page: number,
   sort: number,
@@ -95,27 +84,23 @@ export async function getAllDesign(
   minPrice: number,
   maxPrice: number,
   collectionsFilter: string[],
-  categoriesFilter: string[],
-  colorsFilter: string[],
-  productTypesFilter: string[]
+  categoriesFilter: string[]
 ): Promise<[IProduct[], number]> {
   const filter: {
     name: {
       $regex: string;
       $options: string;
     };
-    totalPrice: {
+    basePrice: {
       $gte: number;
       $lte: number;
     };
     state?: string;
     collections?: { $in: string[] };
     categories?: { $in: string[] };
-    "productTypes.colors"?: { $in: string[] };
-    "productTypes.productTypeRef"?: { $in: string[] };
   } = {
     name: { $regex: q, $options: "i" },
-    totalPrice: {
+    basePrice: {
       $gte: minPrice,
       $lte: maxPrice,
     },
@@ -123,25 +108,22 @@ export async function getAllDesign(
   const sortParams: { totalPrice?: number; createdAt?: number } = {};
   if (sortByPrice) sortParams["totalPrice"] = sortByPrice;
   if (sort) sortParams["createdAt"] = sort;
-
   if (state) filter["state"] = state;
   if (collectionsFilter.length)
     filter["collections"] = { $in: collectionsFilter };
   if (categoriesFilter.length) filter["categories"] = { $in: categoriesFilter };
-  if (colorsFilter.length)
-    filter["productTypes.colors"] = { $in: colorsFilter };
-  if (productTypesFilter.length)
-    filter["productTypes.productTypeRef"] = { $in: productTypesFilter };
+
   return await Promise.all([
     ProductModel.find(filter)
       .populate(detailsLevel)
+      .select("-options")
       .limit(limit)
       .skip(limit * (page - 1))
       .sort(sortParams),
     ProductModel.countDocuments(filter),
   ]);
 }
-export async function getDesignbyId(
+export async function getProductbyId(
   desginId: string
 ): DocumentQuery<IProduct, IProduct, unknown> {
   return await ProductModel.findById({ _id: desginId }).populate(detailsLevel);

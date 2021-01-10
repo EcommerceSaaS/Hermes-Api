@@ -3,12 +3,12 @@ import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
 import { User } from "../users/UserModel";
 export async function getTotalPriceWithDiscount(
-  designs: IProduct[],
+  products: IProduct[],
   codes: Array<ICode>
 ): Promise<IProduct[]> {
   return new Promise<IProduct[]>(async (res) => {
     const result = new Set<IProduct>();
-    for (const design of designs) {
+    for (const design of products) {
       let promoCodeApplied = false;
       for (const code of codes) {
         //for each design check if code is applied
@@ -23,13 +23,13 @@ export async function getTotalPriceWithDiscount(
           // we access database just in case no category or design id can be applied
           const user = await User.findOne({
             _id: code.artist,
-            designs: design._id,
+            products: design._id,
           });
           if (user) {
             result.add(updateDesignPrice(code, design));
             if (code.kind === "PROMOCODE") promoCodeApplied = true;
           } else {
-            design.priceAfterReduction = design.totalPrice;
+            design.priceAfterReduction = design.basePrice;
             result.add(design);
           }
         }
@@ -41,13 +41,13 @@ export async function getTotalPriceWithDiscount(
 }
 function updateDesignPrice(code: ICode, design: IProduct) {
   if (!design.priceAfterReduction)
-    design.priceAfterReduction = design.totalPrice;
+    design.priceAfterReduction = design.basePrice;
   switch (code.type) {
     case "Amount":
       design.priceAfterReduction -= code.amount;
       break;
     case "Percentage":
-      design.priceAfterReduction -= (code.amount * design.totalPrice) / 100;
+      design.priceAfterReduction -= (code.amount * design.basePrice) / 100;
       break;
   }
   return design;

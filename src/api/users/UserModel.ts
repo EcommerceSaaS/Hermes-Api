@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import { urlPattern } from "../../utils/utils";
 import { validator } from "../../utils/utils";
 import { ORDERS_SCHEMA } from "../orders/OrdersModel";
-import { DESIGNS_SCHEMA } from "../product/ProductsModel";
+import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
 import { REVIEWS_SCHEMA } from "../reviews/ReviewModel";
 export const USERS_SCHEMA = "User";
 const userSchema = new mongoose.Schema(
@@ -82,7 +82,7 @@ const userSchema = new mongoose.Schema(
     designs: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: DESIGNS_SCHEMA,
+        ref: PRODUCTS_SCHEMA,
         validate: {
           validator,
           message: `ObjectId is Not valid`,
