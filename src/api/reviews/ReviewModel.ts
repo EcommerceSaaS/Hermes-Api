@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { IReview } from "./IReview";
 import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
+import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
 export const REVIEWS_SCHEMA = "reviews";
 const reviewSchema = new mongoose.Schema(
   {
@@ -15,7 +16,11 @@ const reviewSchema = new mongoose.Schema(
     },
     productId: {
       type: mongoose.Schema.Types.ObjectId,
+<<<<<<< HEAD
       ref: "products",
+=======
+      ref: PRODUCTS_SCHEMA,
+>>>>>>> 219b5e56896d706a0035a87b3e98d76e46aa3dce
       validate: {
         validator,
         message: `ObjectId is Not valid`,
