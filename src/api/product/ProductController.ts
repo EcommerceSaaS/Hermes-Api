@@ -84,7 +84,8 @@ export async function getAllProducts(
   minPrice: number,
   maxPrice: number,
   collectionsFilter: string[],
-  categoriesFilter: string[]
+  categoriesFilter: string[],
+  optionsFilter: string[]
 ): Promise<[IProduct[], number]> {
   const filter: {
     name: {
@@ -98,6 +99,7 @@ export async function getAllProducts(
     state?: string;
     collections?: { $in: string[] };
     categories?: { $in: string[] };
+    options?: { $in: string[] };
   } = {
     name: { $regex: q, $options: "i" },
     basePrice: {
@@ -112,6 +114,7 @@ export async function getAllProducts(
   if (collectionsFilter.length)
     filter["collections"] = { $in: collectionsFilter };
   if (categoriesFilter.length) filter["categories"] = { $in: categoriesFilter };
+  if (optionsFilter.length) filter["options"] = { $in: optionsFilter };
 
   return await Promise.all([
     ProductModel.find(filter)

@@ -8,18 +8,16 @@ import {
   sendCreatedResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
-import { extractFilesFromRequestArray, routesFactory } from "../../utils/utils";
+import { extractFilesFromRequestArray } from "../../utils/utils";
 import {
   createProduct,
   getAllProducts,
   getProductbyId,
-  detailsLevel,
 } from "./ProductController";
 import { ProductModel } from "./ProductsModel";
 import { IProduct } from "./IProduct";
 import { getGFS } from "../../config/DataBaseConnection";
-import { User } from "../users/UserModel";
-import { pick, merge, uniqWith, isEqual } from "lodash";
+import { pick, merge } from "lodash";
 import { reviewsRouter } from "../reviews/ReviewRouter";
 import { OptionsModel, validateOption } from "../option/OptionsModel";
 import { IOption } from "../option/IOption";
@@ -52,11 +50,13 @@ productsRouter.get("/", async (req: Request, res: Response) => {
       q,
       collections,
       categories,
+      options,
       minPrice,
       maxPrice,
     } = req.query;
     collections = collections ? collections : [];
     categories = categories ? categories : [];
+    options = options ? options : [];
     minPrice = minPrice ? Number(minPrice) : 0;
     maxPrice = maxPrice ? Number(maxPrice) : 9999999999;
     limit = Number(limit) || 10;
@@ -64,59 +64,6 @@ productsRouter.get("/", async (req: Request, res: Response) => {
     sort = Number(sort);
     sortByPrice = Number(sortByPrice);
     q = q || "";
-    const { userId, categoryId } = req.params;
-    if (userId && categoryId) {
-      //get All designs by userId and categoryId
-      if (
-        !mongoose.isValidObjectId(userId) ||
-        !mongoose.isValidObjectId(categoryId)
-      )
-        return sendBadRequestResponse(res, "One of the Ids isn't valid");
-      const user = await User.findById(userId); //TODO removed this and filter by artistId
-      const designs = await ProductModel.find({
-        _id: { $in: [...user.designs] },
-        categories: categoryId,
-      }).select("name _id");
-      return sendOKResponse(res, designs);
-    } else if (userId) {
-      //get All categories used by a user
-      if (!mongoose.isValidObjectId(userId))
-        return sendBadRequestResponse(res, "Userid is not a valid objectId");
-      const { categoriesOnly } = req.query;
-
-      const user = await User.findById(userId);
-      if (categoriesOnly) {
-        const designs = await ProductModel.find({
-          _id: { $in: [...user.designs] },
-        }).select("categories");
-        const result: string[] = [];
-        designs.forEach((item) => {
-          result.push(...item.categories);
-        });
-        return sendOKResponse(res, {
-          categories: uniqWith(result, isEqual),
-        });
-      }
-      const filter: {
-        _id: {
-          $in: string[];
-        };
-        name: {
-          $regex: string;
-          $options: string;
-        };
-        categories?: { $in: string[] };
-      } = {
-        _id: { $in: [...user.designs] },
-        name: { $regex: q, $options: "i" },
-      };
-      if (categories.length) filter["categories"] = { $in: categories };
-      const products = await ProductModel.find(filter)
-        .populate(detailsLevel)
-        .limit(limit)
-        .skip(limit * (page - 1));
-      return sendOKResponse(res, products);
-    }
     const [products, count] = await getAllProducts(
       limit,
       page,
@@ -127,7 +74,8 @@ productsRouter.get("/", async (req: Request, res: Response) => {
       minPrice,
       maxPrice,
       collections,
-      categories
+      categories,
+      options
     );
     sendOKResponse(res, {
       products,
