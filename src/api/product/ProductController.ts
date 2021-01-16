@@ -119,7 +119,6 @@ export async function getAllProducts(
   return await Promise.all([
     ProductModel.find(filter)
       .populate(detailsLevel)
-      .select("-options")
       .limit(limit)
       .skip(limit * (page - 1))
       .sort(sortParams),
