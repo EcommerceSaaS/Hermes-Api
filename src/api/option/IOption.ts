@@ -6,5 +6,6 @@ export interface IValue {
 
 export interface IOption extends Document {
   name: string;
+  singleChoice: boolean;
   values: IValue[];
 }

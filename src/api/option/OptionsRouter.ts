@@ -11,7 +11,11 @@ import { routesFactory } from "../../utils/utils";
 const optionsRouter = Router();
 optionsRouter.post("/", async (req: Request, res: Response) => {
   routesFactory(res, async () => {
-    const body: IOption = pick(req.body, ["name", "values"]) as IOption;
+    const body: IOption = pick(req.body, [
+      "name",
+      "singleChoice",
+      "values",
+    ]) as IOption;
     const { error } = validateOption(body);
     if (error) sendBadRequestResponse(res, error.details[0].message);
     let option = new OptionsModel(body);
