@@ -8,7 +8,7 @@ import {
   sendCreatedResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
-import { extractFilesFromRequestArray } from "../../utils/utils";
+import { extractFilesFromRequestArray, routesFactory } from "../../utils/utils";
 import {
   createProduct,
   getAllProducts,
@@ -87,6 +87,109 @@ productsRouter.get("/", async (req: Request, res: Response) => {
     sendErrorResponse(res, error);
   }
 });
+productsRouter.get("/group", (req: Request, res: Response) => {
+  routesFactory(res, async () => {
+    const { groupBy } = req.query;
+    let products = [];
+    switch (groupBy) {
+      case "categories": {
+        products = await ProductModel.aggregate([
+          {
+            $unwind: "$categories",
+          },
+          {
+            $group: {
+              _id: "$categories",
+              products: { $push: { product_id: "$_id" } },
+            },
+          },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "_id",
+              foreignField: "_id",
+              as: "category",
+            },
+          },
+          {
+            $lookup: {
+              from: "products",
+              localField: "products.product_id",
+              foreignField: "_id",
+              as: "products",
+            },
+          },
+        ]);
+        break;
+      }
+      case "collections": {
+        products = await ProductModel.aggregate([
+          {
+            $unwind: "$collections",
+          },
+          {
+            $group: {
+              _id: "$collections",
+              products: { $push: { product_id: "$_id" } },
+            },
+          },
+          {
+            $lookup: {
+              from: "collections",
+              localField: "_id",
+              foreignField: "_id",
+              as: "collection",
+            },
+          },
+          {
+            $lookup: {
+              from: "products",
+              localField: "products.product_id",
+              foreignField: "_id",
+              as: "products",
+            },
+          },
+        ]);
+        break;
+      }
+      case "options": {
+        products = await ProductModel.aggregate([
+          {
+            $unwind: "$options",
+          },
+          {
+            $group: {
+              _id: "$options",
+              products: { $push: { product_id: "$_id" } },
+            },
+          },
+          {
+            $lookup: {
+              from: "options",
+              localField: "_id",
+              foreignField: "_id",
+              as: "option",
+            },
+          },
+          {
+            $lookup: {
+              from: "products",
+              localField: "products.product_id",
+              foreignField: "_id",
+              as: "products",
+            },
+          },
+        ]);
+        break;
+      }
+      default: {
+        sendBadRequestResponse(res, "Unknown grouping option");
+        break;
+      }
+    }
+    sendOKResponse(res, products);
+  });
+});
 productsRouter.get("/:productId", async (req: Request, res: Response) => {
   const { productId } = req.params;
   //userID for design of a certain user
@@ -100,6 +203,7 @@ productsRouter.get("/:productId", async (req: Request, res: Response) => {
     sendErrorResponse(res, error);
   }
 });
+
 productsRouter.put("/:productId", (req: Request, res: Response) => {
   multer(req, res, async (err: MulterError) => {
     if (err) return sendErrorResponse(res, err);
