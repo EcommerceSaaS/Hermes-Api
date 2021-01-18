@@ -15,6 +15,14 @@ const optionSchema = new mongoose.Schema(
       required: true,
       default: true,
     },
+    singleChoice: {
+      // true ==> this option is single value
+      // false ==> this option is multiple choices meaning for each value sent in the order
+      // body it's price will added to the basePrice
+      type: Boolean,
+      required: true,
+      default: true,
+    },
     values: [
       new mongoose.Schema(
         {
@@ -39,6 +47,7 @@ const optionSchema = new mongoose.Schema(
 export function validateOption(option: IOption): Joi.ValidationResult {
   const schema = Joi.object({
     name: Joi.string().min(3).max(10).required(),
+    singleChoice: Joi.boolean().required(),
     values: Joi.array()
       .items(
         Joi.object({
