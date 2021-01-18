@@ -50,10 +50,14 @@ export function removeFiles(gfs: g.Grid, fileNamesArray: string[]) {
 export function validator(v: any): boolean {
   return mongoose.isValidObjectId(v);
 }
-export function routesFactory(res: Response, route: () => void): void {
+export function routesFactory(
+  res: Response,
+  route: () => void,
+  fallback: (error: Error) => void = (error) => sendErrorResponse(res, error)
+): void {
   try {
     route();
   } catch (error) {
-    sendErrorResponse(res, error);
+    fallback(error);
   }
 }
