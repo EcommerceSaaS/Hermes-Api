@@ -21,8 +21,8 @@ export async function handleUserSignUp(
     body.provider = "local";
     body.profilePhoto = photosFiles.profilePhotoFile.filename;
     body.profileBanner = photosFiles.profilePhotoBanner.filename;
-    body.adresse = body.adresse
-      ? JSON.parse(JSON.stringify(body.adresse))[0]
+    body.address = body.address
+      ? JSON.parse(JSON.stringify(body.address))[0]
       : undefined;
     body.socialMedia = body.socialMedia
       ? JSON.parse(JSON.stringify(body.socialMedia))

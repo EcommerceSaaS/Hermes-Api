@@ -1,12 +1,8 @@
 import { Document } from "mongoose";
+import { IAddress } from "../users/IUser";
 
 export interface IOrder extends Document {
-  address: {
-    fullAdresse: string;
-    state: string;
-    city: string;
-    postalCode: number;
-  };
+  address: IAddress;
   designs: IOrderRequest[];
   subTotalPrice: number;
   totalPrice: number;

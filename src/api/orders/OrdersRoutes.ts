@@ -59,7 +59,7 @@ ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
     const user = await User.findById({ _id: req.user.id });
     body.subTotalPrice = totalPrice;
     //here we have all the necessary info
-    body.totalPrice = totalPrice + getShippingPriceByWilaya(user.adresse.state);
+    body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
     body.ownerId = req.user.id;
 
     const order = new OrdersModel(body);
