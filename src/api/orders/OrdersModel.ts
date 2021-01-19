@@ -3,25 +3,13 @@ import mongoose from "mongoose";
 import { IOrder, IOrderRequest } from "./IOrder";
 import { validator } from "../../utils/utils";
 import Joi from "@hapi/joi";
-import { ProductModel } from "../product/ProductsModel";
+import { ProductModel, PRODUCTS_SCHEMA } from "../product/ProductsModel";
+import { OPTIONS_SCHEMA } from "../option/OptionsModel";
 const ordersStates = ["onhold", "ready", "delivered"];
-const necklineTypes = [
-  "Unisexe Regular",
-  "Unisexe Premium",
-  "Unisexe Slim Fit",
-  "Unisexe Manches Longues",
-  "Women Regular",
-  "Women Premium",
-  "Women Long Sleeve",
-  "Kids",
-  "Sweat-Shirt",
-  "Pull",
-  "Sweat-shirt Enfant",
-];
 export const ORDERS_SCHEMA = "orders";
 const ordersSchema = new mongoose.Schema(
   {
-    ownerId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -36,41 +24,42 @@ const ordersSchema = new mongoose.Schema(
       city: String,
       postalCode: Number,
     },
-    designs: [
+    products: [
       new mongoose.Schema(
         {
-          designRef: {
+          productRef: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Designs",
+            ref: PRODUCTS_SCHEMA,
             validate: {
               validator,
               message: `ObjectId is Not valid`,
             },
           },
-          size: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "sizes",
-            validate: {
-              validator,
-              message: `ObjectId is Not valid`,
+          options: [
+            {
+              optionsId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: OPTIONS_SCHEMA,
+                validate: {
+                  validator,
+                  message: `ObjectId is Not valid`,
+                },
+              },
+              values: [
+                {
+                  type: mongoose.Schema.Types.ObjectId,
+                  ref: "options.values",
+                  validate: {
+                    validator,
+                    message: `ObjectId is Not valid`,
+                  },
+                },
+              ],
             },
-          },
-          color: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "colors",
-            validate: {
-              validator,
-              message: `ObjectId is Not valid`,
-            },
-          },
+          ],
           quantity: {
             type: Number,
             min: 1,
-            required: true,
-          },
-          neckline: {
-            type: String,
-            enum: necklineTypes,
             required: true,
           },
         },
@@ -83,7 +72,8 @@ const ordersSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    totalPrice: { type: Number, required: true, min: 0 }, //with shipping included
+    //with shipping included
+    totalPrice: { type: Number, required: true, min: 0 },
     state: { type: String, required: true, enum: ordersStates },
   },
   { versionKey: false, timestamps: true }
@@ -130,14 +120,15 @@ function validateOrder(order: IOrder): Joi.ValidationResult {
       city: Joi.string().required(),
       postalCode: Joi.number().required(),
     }).required(),
-    designs: Joi.array().items(
+    products: Joi.array().items(
       Joi.object({
-        designRef: Joi.string().required(),
-        size: Joi.string().required(),
-        color: Joi.string().required(),
-        neckline: Joi.string()
-          .valid(...necklineTypes)
-          .required(),
+        productRef: Joi.string().required(),
+        options: Joi.array().items(
+          Joi.object({
+            optionsId: Joi.string(),
+            values: Joi.array().items(Joi.string()),
+          })
+        ),
         quantity: Joi.number().min(1).required(),
       })
     ),

@@ -6,7 +6,7 @@ export interface IUser extends Document {
   storeName: string;
   email: string;
   phone: string;
-  adresse: IAdresse;
+  address: IAddress;
   portfolio: string;
   description: string;
   isArtist?: boolean;
@@ -24,7 +24,7 @@ export interface IUser extends Document {
   artistProfileView(): any;
   userProfileView(): any;
 }
-interface IAdresse {
+export interface IAddress {
   fullAdresse: string;
   state: string;
   city: string;
