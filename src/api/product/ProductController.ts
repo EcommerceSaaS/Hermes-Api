@@ -27,6 +27,10 @@ export async function createProduct(
     const gfs = getGFS();
     const session = mongoose.startSession();
     try {
+      // body.options.forEach((option)=>{
+      //   return {...option,singleChoice:JSON.parse(option.singleChoice)}
+      // })
+      console.log(body.options);
       const { error } = validateProduct(body);
       if (error) {
         removeFiles(gfs, files);
@@ -72,7 +76,7 @@ export const detailsLevel: {
 }[] = [
   { path: COLLECTIONS_SCHEMA, select: "_id name", match: { active: true } },
   { path: CATEGORIES_SCHEMA, select: "_id name", match: { active: true } },
-  { path: OPTIONS_SCHEMA, select: "_id name values" },
+  { path: OPTIONS_SCHEMA, select: "_id name values singleChoice" },
 ];
 export async function getAllProducts(
   limit: number,

@@ -4,7 +4,6 @@ import Joi from "@hapi/joi";
 import { validator } from "../../utils/utils";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
 import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
-import { USERS_SCHEMA } from "../users/UserModel";
 import { REVIEWS_SCHEMA } from "../reviews/ReviewModel";
 import { OPTIONS_SCHEMA } from "../option/OptionsModel";
 const productStates = ["inactive", "active", "archived"];
@@ -102,6 +101,7 @@ export function validateProduct(product: IProduct): Joi.ValidationResult {
           Joi.string(),
           Joi.object({
             name: Joi.string().required(),
+            singleChoice: Joi.boolean().required(),
             values: Joi.array()
               .items(
                 Joi.object({
