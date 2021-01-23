@@ -15,9 +15,8 @@ function creatCode(req: Request, promoCode: boolean): Promise<ICode> {
       "activationDate",
       "expirationDate",
       "active",
-      "artist",
       "category",
-      "design",
+      "product",
     ]) as ICode;
     if (body.code) {
       const exists = await CodeModel.exists({ code: body.code });

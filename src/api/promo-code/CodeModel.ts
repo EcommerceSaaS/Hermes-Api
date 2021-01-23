@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import { validator } from "../../utils/utils";
 import { ICode } from "./ICode";
 import Joi from "@hapi/joi";
+import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
+import { USERS_SCHEMA } from "../users/UserModel";
+import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
 const salesTypes = ["Percentage", "Amount"];
 export const CODES_SCHEMA = "codes";
 const codeSchema = new mongoose.Schema(
@@ -49,26 +52,17 @@ const codeSchema = new mongoose.Schema(
       default: true,
       required: true,
     },
-    artist: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "User",
-      validate: {
-        validator,
-        message: `ObjectId is Not valid`,
-      },
-    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "categories",
+      ref: CATEGORIES_SCHEMA,
       validate: {
         validator,
         message: `ObjectId is Not valid`,
       },
     },
-    design: {
+    products: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Designs",
+      ref: PRODUCTS_SCHEMA,
       validate: {
         validator,
         message: `ObjectId is Not valid`,
@@ -91,8 +85,7 @@ export function validateCode(
     amount: Joi.number().required(),
     activationDate: Joi.date(),
     expirationDate: Joi.date().required(),
-    artist: Joi.string().required(),
-    design: Joi.string(),
+    product: Joi.string(),
     category: Joi.string(),
   });
   const schemaReduction = Joi.object().keys({
@@ -103,8 +96,7 @@ export function validateCode(
     amount: Joi.number().required(),
     activationDate: Joi.date(),
     expirationDate: Joi.date().required(),
-    artist: Joi.string().required(),
-    design: Joi.string(),
+    product: Joi.string(),
     category: Joi.string(),
   });
   return code

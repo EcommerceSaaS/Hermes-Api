@@ -6,7 +6,7 @@ import {
   sendErrorResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
-import { pick } from "lodash";
+import { pick, values } from "lodash";
 import { ProductModel } from "../product/ProductsModel";
 import { CodeModel } from "../promo-code/CodeModel";
 import { IProduct } from "../product/IProduct";
@@ -17,13 +17,19 @@ import {
   getShippingPriceByWilaya,
 } from "./OrdersController";
 import { IOrder, IOrderRequest } from "./IOrder";
-
+import { IOption } from "../option/IOption";
+import mongoose from "mongoose";
+interface IValue {
+  name: string;
+  price: number;
+  _id: string;
+}
 const ordersRouter = Router();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
+ordersRouter.post("/", [], async (req: any, res: Response) => {
   const body: IOrder = pick(req.body, [
     "address",
-    "designs",
+    "products",
     "subTotalPrice",
     "totalPrice",
     "state",
@@ -32,43 +38,93 @@ ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
   const { error } = validateOrder(body);
   if (error) return sendBadRequestResponse(res, error.details[0].message);
   try {
-    const designIds = body.designs.map((item: IOrderRequest) => item.designRef);
-    const quatities = body.designs.map((item: IOrderRequest) => item.quantity);
-    const results = await Promise.all([
+    const productsIds = body.products.map(
+      (item: IOrderRequest) => item.productRef
+    );
+    // for avoiding unnecessary loops
+    const productsBeforeValues: {
+      [productRef: string]: {
+        [optionRef: string]: string[];
+      };
+    } = {};
+    body.products.forEach((product: IOrderRequest) => {
+      productsBeforeValues[product.productRef] = {};
+      product.options.forEach(
+        (option: { optionId: string; values: string[] }) => {
+          productsBeforeValues[product.productRef][option.optionId] =
+            option.values;
+        }
+      );
+    });
+    const quatities = body.products.map((item: IOrderRequest) => item.quantity);
+    const [codes, products] = await Promise.all([
       CodeModel.find({
+        //TODO take code expiration date into ocnsideration when filtering codes
         $or: [{ code: body.promoCode }, { kind: "REDUCTION" }],
+        active: true,
       }).select("type amount artist category design kind"),
-      ProductModel.find({ _id: { $in: [...designIds] } }).select(
-        "totalPrice categories"
-      ),
+      ProductModel.find({ _id: { $in: [...productsIds] } })
+        .populate("options")
+        .select("basePrice categories options"),
     ]);
-    let designs: IProduct[] = null;
-    let totalPrice = 0;
-
-    if (!results[0].length) {
-      designs = results[1];
-      designs.forEach((item, index) => {
-        totalPrice += item.basePrice * quatities[index];
+    const prods = products.forEach((product, index) => {
+      let price = product.basePrice;
+      product.options.forEach((option: any) => {
+        if (option.singleChoice) {
+          // we'll the price since it's only one value
+          price += option.values.find(
+            (value: IValue) =>
+              value._id.toString() ===
+              productsBeforeValues[product._id][option._id][0]
+          ).price;
+        } else {
+          //otherwise we loop over the values and add the prices
+          option.values.forEach((value: IValue) => {
+            if (
+              productsBeforeValues[product._id][option._id].includes(
+                value._id.toString()
+              )
+            ) {
+              price += value.price;
+            }
+          });
+        }
+        // the final price
+        // console.log({
+        //   have: productsBeforeValues[product._id][option._id],
+        //   choice: option.singleChoice,
+        // });
       });
-    } else {
-      designs = await getTotalPriceWithDiscount(results[1], results[0]);
-      designs.forEach((item, index) => {
-        totalPrice += item.priceAfterReduction * quatities[index];
-      });
-    }
-    const user = await User.findById({ _id: req.user.id });
-    body.subTotalPrice = totalPrice;
-    //here we have all the necessary info
-    body.totalPrice = totalPrice + getShippingPriceByWilaya(user.adresse.state);
-    body.ownerId = req.user.id;
+      console.log(price * quatities[index]);
+    });
+    sendOKResponse(res, products);
+    // let designs: IProduct[] = null;
+    // let totalPrice = 0;
+    // //re-check this and try to minize this code
+    // if (!codes.length) {
+    //   designs = products;
+    //   designs.forEach((item, index) => {
+    //     totalPrice += item.basePrice * quatities[index];
+    //   });
+    // } else {
+    //   designs = await getTotalPriceWithDiscount(products, codes);
+    //   designs.forEach((item, index) => {
+    //     totalPrice += item.priceAfterReduction * quatities[index];
+    //   });
+    // }
+    // const user = await User.findById({ _id: req.user.id });
+    // body.subTotalPrice = totalPrice;
+    // //here we have all the necessary info
+    // // body.totalPrice = totalPrice + getShippingPr iceByWilaya(user.address.state);
+    // body.userId = req.user.id;
 
-    const order = new OrdersModel(body);
-    const result = await Promise.all([
-      user.update({ $push: { orders: order._id } }).exec(),
-      order.save(),
-    ]);
+    // const order = new OrdersModel(body);
+    // const result = await Promise.all([
+    //   user.update({ $push: { orders: order._id } }).exec(),
+    //   order.save(),
+    // ]);
 
-    sendCreatedResponse(res, result[1]);
+    // sendCreatedResponse(res, result[1]);
   } catch (error) {
     sendErrorResponse(res, error);
   }
@@ -80,8 +136,8 @@ ordersRouter.get("/", async (req: Request, res: Response) => {
       ? { active: JSON.parse(req.query.active) }
       : {};
     const orders = await OrdersModel.find(filteringObject).populate(
-      "ownerId",
-      "_id name"
+      "userId",
+      "_id name address"
     );
     sendOKResponse(res, orders);
   } catch (error) {
@@ -106,7 +162,7 @@ ordersRouter.delete("/:orderId", [Auth], async (req: any, res: Response) => {
   }
 });
 ordersRouter.get("/:orderId", async (req: Request, res: Response) => {
-  const orderId = req.params.orderId;
+  const { orderId } = req.params;
   try {
     const order = await OrdersModel.findById(orderId);
     sendOKResponse(res, order);
@@ -115,7 +171,7 @@ ordersRouter.get("/:orderId", async (req: Request, res: Response) => {
   }
 });
 ordersRouter.put("/:orderId", async (req: Request, res: Response) => {
-  const state = req.body.state;
+  const { state } = req.body;
   try {
     if (ordersStates.includes(state)) {
       const order = await OrdersModel.findByIdAndUpdate(
