@@ -1,4 +1,5 @@
 import { Document } from "mongoose";
+import { IOption } from "../option/IOption";
 
 export interface IProduct extends Document {
   name: string;
@@ -10,5 +11,5 @@ export interface IProduct extends Document {
   basePrice: number;
   priceAfterReduction: number;
   price: number;
-  options: string[];
+  options: string[] | IOption[];
 }

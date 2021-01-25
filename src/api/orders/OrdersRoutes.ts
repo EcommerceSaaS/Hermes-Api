@@ -67,16 +67,19 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
         .populate("options")
         .select("basePrice categories options"),
     ]);
-    const prods = products.forEach((product, index) => {
+    let finalPrice = 0;
+    products.forEach((product, index) => {
       let price = product.basePrice;
       product.options.forEach((option: any) => {
         if (option.singleChoice) {
           // we'll the price since it's only one value
-          price += option.values.find(
-            (value: IValue) =>
-              value._id.toString() ===
-              productsBeforeValues[product._id][option._id][0]
-          ).price;
+          if (productsBeforeValues[product._id][option._id]) {
+            price += option.values.find(
+              (value: IValue) =>
+                value._id.toString() ===
+                productsBeforeValues[product._id][option._id][0]
+            ).price;
+          }
         } else {
           //otherwise we loop over the values and add the prices
           option.values.forEach((value: IValue) => {
@@ -89,15 +92,13 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
             }
           });
         }
-        // the final price
-        // console.log({
-        //   have: productsBeforeValues[product._id][option._id],
-        //   choice: option.singleChoice,
-        // });
       });
-      console.log(price * quatities[index]);
+      product.basePrice = price;
+      //check if promoCode applies here and apply it before multiplying by the quantity
+      finalPrice += price * quatities[index];
+      console.log(product.basePrice);
     });
-    sendOKResponse(res, products);
+    sendOKResponse(res, { finalPrice });
     // let designs: IProduct[] = null;
     // let totalPrice = 0;
     // //re-check this and try to minize this code
