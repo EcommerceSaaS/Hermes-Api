@@ -8,7 +8,6 @@ export interface ICode extends Document {
   activationDate: Date;
   expirationDate: Date;
   active: boolean;
-  artist: string;
   category: string;
-  design: string;
+  product: string;
 }

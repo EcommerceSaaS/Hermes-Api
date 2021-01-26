@@ -15,9 +15,8 @@ function creatCode(req: Request, promoCode: boolean): Promise<ICode> {
       "activationDate",
       "expirationDate",
       "active",
-      "artist",
       "category",
-      "design",
+      "product",
     ]) as ICode;
     if (body.code) {
       const exists = await CodeModel.exists({ code: body.code });
@@ -37,15 +36,14 @@ function creatCode(req: Request, promoCode: boolean): Promise<ICode> {
 }
 function getAllCodes(req: Request, type: boolean): Promise<[ICode[], number]> {
   const { active } = req.query;
-  const kind = type ? "promoCode".toUpperCase() : "reduction".toUpperCase();
+  const kind = type ? "PROMOCODE" : "REDUCTION";
   const filteringObject = active
     ? { active: JSON.parse(active), kind: kind }
     : { kind: kind };
   return Promise.all([
     CodeModel.find(filteringObject)
-      .populate("artist", "_id storeName")
       .populate("category", "_id name")
-      .populate("design", "_id name"),
+      .populate("product", "_id name"),
     CodeModel.countDocuments(filteringObject),
   ]);
 }
@@ -61,9 +59,8 @@ function updateCode(req: Request): DocumentQuery<ICode, ICode, unknown> {
     "activationDate",
     "expirationDate",
     "active",
-    "artist",
     "category",
-    "design",
+    "product",
   ]);
   const updateQuery: any = {
     $set: body,
@@ -74,9 +71,9 @@ function updateCode(req: Request): DocumentQuery<ICode, ICode, unknown> {
     delete body["category"];
     updateQuery.$unset.category = 1;
   }
-  if (!body.design) {
-    delete body["design"];
-    updateQuery.$unset.design = 1;
+  if (!body.product) {
+    delete body["product"];
+    updateQuery.$unset.product = 1;
   }
 
   return CodeModel.findByIdAndUpdate(req.params.codeId, updateQuery, {
