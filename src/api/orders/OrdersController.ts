@@ -1,6 +1,9 @@
 import { wilayasPricing } from "../../utils/WilayaPricing";
 import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
+const AMOUNT = "Amount";
+const PERCENTAGE = "Percentage";
+
 export async function getTotalPriceWithDiscount(
   products: IProduct[],
   codes: Array<ICode>
@@ -10,35 +13,37 @@ export async function getTotalPriceWithDiscount(
     for (const product of products) {
       let promoCodeApplied = false;
       for (const code of codes) {
-        //for each product check if code was applied
-        //TODO test for if a promocode was applied
-        // but we still have to apply multiple reductions
+        //for each product check if promocode was applied
+        //but we can apply multiple reductions
         if (promoCodeApplied && code.type === "PROMOCODE") continue;
         if (
           product._id.equals(code.product) ||
           product.categories.includes(code.category)
         ) {
-          result.add(updateDesignPrice(code, product));
+          result.add(updateProductPrice(code, product));
           if (code.kind === "PROMOCODE") promoCodeApplied = true;
+        } else {
+          //if no code was applied to the product add it as it is
+          result.add(product);
         }
       }
-      //if node code was applied to the design add it as it is
     }
     res([...result]);
   });
 }
-function updateDesignPrice(code: ICode, design: IProduct) {
-  if (!design.priceAfterReduction)
-    design.priceAfterReduction = design.basePrice;
+function updateProductPrice(code: ICode, product: IProduct) {
+  if (!product.priceAfterReduction) product.priceAfterReduction = product.price;
   switch (code.type) {
-    case "Amount":
-      design.priceAfterReduction -= code.amount;
+    case AMOUNT: {
+      product.priceAfterReduction -= code.amount;
       break;
-    case "Percentage":
-      design.priceAfterReduction -= (code.amount * design.basePrice) / 100;
+    }
+    case PERCENTAGE: {
+      product.priceAfterReduction -= (code.amount * product.price) / 100;
       break;
+    }
   }
-  return design;
+  return product;
 }
 
 export function getShippingPriceByWilaya(wilaya: string): number {

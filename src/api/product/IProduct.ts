@@ -10,6 +10,7 @@ export interface IProduct extends Document {
   artistId: string;
   basePrice: number;
   priceAfterReduction: number;
+  //this is the price after the values prices were added to the bese price
   price: number;
   options: string[] | IOption[];
 }

@@ -60,7 +60,7 @@ const codeSchema = new mongoose.Schema(
         message: `ObjectId is Not valid`,
       },
     },
-    products: {
+    product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: PRODUCTS_SCHEMA,
       validate: {

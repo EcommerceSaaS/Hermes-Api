@@ -62,13 +62,12 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
         //TODO take code expiration date into ocnsideration when filtering codes
         $or: [{ code: body.promoCode }, { kind: "REDUCTION" }],
         active: true,
-      }).select("type amount artist category design kind"),
+      }),
       ProductModel.find({ _id: { $in: [...productsIds] } })
         .populate("options")
         .select("basePrice categories options"),
     ]);
-    let finalPrice = 0;
-    products.forEach((product, index) => {
+    products.forEach((product) => {
       let price = product.basePrice;
       product.options.forEach((option: any) => {
         if (option.singleChoice) {
@@ -93,39 +92,39 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
           });
         }
       });
-      product.basePrice = price;
+      product.price = price;
       //check if promoCode applies here and apply it before multiplying by the quantity
-      finalPrice += price * quatities[index];
-      console.log(product.basePrice);
     });
-    sendOKResponse(res, { finalPrice });
-    // let designs: IProduct[] = null;
-    // let totalPrice = 0;
-    // //re-check this and try to minize this code
-    // if (!codes.length) {
-    //   designs = products;
-    //   designs.forEach((item, index) => {
-    //     totalPrice += item.basePrice * quatities[index];
-    //   });
-    // } else {
-    //   designs = await getTotalPriceWithDiscount(products, codes);
-    //   designs.forEach((item, index) => {
-    //     totalPrice += item.priceAfterReduction * quatities[index];
-    //   });
-    // }
-    // const user = await User.findById({ _id: req.user.id });
-    // body.subTotalPrice = totalPrice;
-    // //here we have all the necessary info
-    // // body.totalPrice = totalPrice + getShippingPr iceByWilaya(user.address.state);
-    // body.userId = req.user.id;
 
-    // const order = new OrdersModel(body);
+    let totalPrice = 0;
+    //re-check this and try to minize this code
+    if (!codes.length) {
+      products.forEach((product, index) => {
+        totalPrice += product.price * quatities[index];
+      });
+    } else {
+      (await getTotalPriceWithDiscount(products, codes)).forEach(
+        (item, index) => {
+          totalPrice += item.priceAfterReduction
+            ? item.priceAfterReduction * quatities[index]
+            : item.price * quatities[index];
+        }
+      );
+    }
+    //TODO push order id to the user order array and add shipping price
+    // const user = await User.findById({ _id: req.user.id });
+    body.subTotalPrice = totalPrice;
+    //here we have all the necessary info
+    // body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
+    body.totalPrice = totalPrice;
+    body.userId = "5fe9a3d1d63aea2340b46704";
+    let order = new OrdersModel(body);
+    order = await order.save();
     // const result = await Promise.all([
     //   user.update({ $push: { orders: order._id } }).exec(),
     //   order.save(),
     // ]);
-
-    // sendCreatedResponse(res, result[1]);
+    sendCreatedResponse(res, order);
   } catch (error) {
     sendErrorResponse(res, error);
   }
