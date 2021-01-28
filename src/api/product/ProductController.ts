@@ -9,6 +9,7 @@ import { OptionsModel, OPTIONS_SCHEMA } from "../option/OptionsModel";
 import mongoose from "mongoose";
 import { CATEGORIES_SCHEMA } from "../category/CategoryModel";
 import { COLLECTIONS_SCHEMA } from "../collection/CollectionModel";
+import { IOption } from "../option/IOption";
 export async function createProduct(
   req: Request,
   files: string[]
@@ -37,15 +38,15 @@ export async function createProduct(
         return rej(error.details[0].message);
       }
       (await session).withTransaction(async () => {
-        const optionIds: string[] = body.options.filter(
+        const optionIds: string[] = (body.options as string[]).filter(
           (option) => typeof option === "string"
         );
-        const options = body.options.filter(
+        const options = (body.options as IOption[]).filter(
           (option) => typeof option !== "string"
         );
         const newOptions: string[] = (
           await OptionsModel.insertMany(options)
-        ).map((option) => option._id);
+        ).map((option: { _id: string }) => option._id);
         let product = new ProductModel({
           ...body,
           options: [...optionIds, ...newOptions],

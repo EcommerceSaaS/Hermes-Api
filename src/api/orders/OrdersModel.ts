@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from "mongoose";
-import { IOrder, IOrderRequest } from "./IOrder";
+import { IOrder } from "./IOrder";
 import { validator } from "../../utils/utils";
 import Joi from "@hapi/joi";
-import { ProductModel, PRODUCTS_SCHEMA } from "../product/ProductsModel";
+import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
 import { OPTIONS_SCHEMA } from "../option/OptionsModel";
 const ordersStates = ["onhold", "ready", "delivered"];
 export const ORDERS_SCHEMA = "orders";
@@ -18,12 +18,6 @@ const ordersSchema = new mongoose.Schema(
         message: `ObjectId is Not valid`,
       },
     },
-    address: {
-      fullAdresse: String,
-      state: String,
-      city: String,
-      postalCode: Number,
-    },
     products: [
       new mongoose.Schema(
         {
@@ -37,7 +31,7 @@ const ordersSchema = new mongoose.Schema(
           },
           options: [
             {
-              optionsId: {
+              optionId: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: OPTIONS_SCHEMA,
                 validate: {
@@ -78,54 +72,48 @@ const ordersSchema = new mongoose.Schema(
   },
   { versionKey: false, timestamps: true }
 );
-ordersSchema.pre("save", async function (this: any, next: any) {
-  try {
-    const designIds: string[] = [];
-    this.designs.forEach((design: IOrderRequest) => {
-      designIds.push(design.designRef);
-    });
+// ordersSchema.pre("save", async function (this: any, next: any) {
+//   try {
+//     const designIds: string[] = [];
+//     this.designs.forEach((design: IOrderRequest) => {
+//       designIds.push(design.designRef);
+//     });
 
-    await ProductModel.update(
-      { _id: { $in: designIds } },
-      { $inc: { numberOfOrders: 1 } },
-      { multi: true }
-    );
-  } catch (error) {
-    console.log(error);
-  }
-  next();
-});
-ordersSchema.post("findOneAndDelete", async function (doc: any) {
-  try {
-    const designIds: string[] = [];
-    doc.designs.forEach((design: IOrderRequest) => {
-      designIds.push(design.designRef);
-    });
-    await ProductModel.update(
-      { _id: { $in: designIds } },
-      { $inc: { numberOfOrders: -1 } },
-      { multi: true }
-    );
-  } catch (error) {
-    console.log(error);
-  }
-});
+//     await ProductModel.update(
+//       { _id: { $in: designIds } },
+//       { $inc: { numberOfOrders: 1 } },
+//       { multi: true }
+//     );
+//   } catch (error) {
+//     console.log(error);
+//   }
+//   next();
+// });
+// ordersSchema.post("findOneAndDelete", async function (doc: any) {
+//   try {
+//     const designIds: string[] = [];
+//     doc.designs.forEach((design: IOrderRequest) => {
+//       designIds.push(design.designRef);
+//     });
+//     await ProductModel.update(
+//       { _id: { $in: designIds } },
+//       { $inc: { numberOfOrders: -1 } },
+//       { multi: true }
+//     );
+//   } catch (error) {
+//     console.log(error);
+//   }
+// });
 
 const OrdersModel = mongoose.model<IOrder>(ORDERS_SCHEMA, ordersSchema);
 function validateOrder(order: IOrder): Joi.ValidationResult {
   const schema = Joi.object({
-    address: Joi.object({
-      fullAdresse: Joi.string().required(),
-      state: Joi.string().required(),
-      city: Joi.string().required(),
-      postalCode: Joi.number().required(),
-    }).required(),
     products: Joi.array().items(
       Joi.object({
         productRef: Joi.string().required(),
         options: Joi.array().items(
           Joi.object({
-            optionsId: Joi.string(),
+            optionId: Joi.string(),
             values: Joi.array().items(Joi.string()),
           })
         ),

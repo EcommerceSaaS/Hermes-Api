@@ -9,21 +9,25 @@ import {
 import { pick } from "lodash";
 import { ProductModel } from "../product/ProductsModel";
 import { CodeModel } from "../promo-code/CodeModel";
-import { IProduct } from "../product/IProduct";
+
 import { User } from "../users/UserModel";
 import Auth from "../../services/middlewares/Auth";
 import {
   getTotalPriceWithDiscount,
-  getShippingPriceByWilaya,
+  normalizeOptionsAndValues,
 } from "./OrdersController";
 import { IOrder, IOrderRequest } from "./IOrder";
-
+import mongoose from "mongoose";
+interface IValue {
+  name: string;
+  price: number;
+  _id: string;
+}
 const ordersRouter = Router();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
   const body: IOrder = pick(req.body, [
-    "address",
-    "designs",
+    "products",
     "subTotalPrice",
     "totalPrice",
     "state",
@@ -31,46 +35,92 @@ ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
   ]) as IOrder;
   const { error } = validateOrder(body);
   if (error) return sendBadRequestResponse(res, error.details[0].message);
+  const session = mongoose.startSession();
   try {
-    const designIds = body.designs.map((item: IOrderRequest) => item.designRef);
-    const quatities = body.designs.map((item: IOrderRequest) => item.quantity);
-    const results = await Promise.all([
+    const productsIds = body.products.map(
+      (item: IOrderRequest) => item.productRef
+    );
+    // for avoiding unnecessary loops
+    const productsBeforeValues: {
+      [productRef: string]: {
+        [optionRef: string]: string[];
+      };
+    } = normalizeOptionsAndValues(body.products);
+    const quatities = body.products.map((item: IOrderRequest) => item.quantity);
+    const [codes, products] = await Promise.all([
       CodeModel.find({
         $or: [{ code: body.promoCode }, { kind: "REDUCTION" }],
-      }).select("type amount artist category design kind"),
-      ProductModel.find({ _id: { $in: [...designIds] } }).select(
-        "totalPrice categories"
-      ),
+        active: true,
+        expirationDate: {
+          $gte: new Date(),
+        },
+      }),
+      ProductModel.find({ _id: { $in: [...productsIds] } })
+        .populate("options")
+        .select("basePrice categories options"),
     ]);
-    let designs: IProduct[] = null;
-    let totalPrice = 0;
+    products.forEach((product) => {
+      let price = product.basePrice;
+      product.options.forEach((option: any) => {
+        if (option.singleChoice) {
+          // we'll accumulate the price since it's only one value
+          if (productsBeforeValues[product._id][option._id]) {
+            price += option.values.find(
+              (value: IValue) =>
+                value._id.toString() ===
+                productsBeforeValues[product._id][option._id][0]
+            ).price;
+          }
+        } else {
+          //otherwise we loop over the values and add their prices
+          option.values.forEach((value: IValue) => {
+            if (
+              productsBeforeValues[product._id][option._id].includes(
+                value._id.toString()
+              )
+            ) {
+              price += value.price;
+            }
+          });
+        }
+      });
+      product.price = price;
+      //check if promoCode applies here and apply it before multiplying by the quantity
+    });
 
-    if (!results[0].length) {
-      designs = results[1];
-      designs.forEach((item, index) => {
-        totalPrice += item.basePrice * quatities[index];
+    let totalPrice = 0;
+    //re-check this and try to minize this code
+    if (!codes.length) {
+      products.forEach((product, index) => {
+        totalPrice += product.price * quatities[index];
       });
     } else {
-      designs = await getTotalPriceWithDiscount(results[1], results[0]);
-      designs.forEach((item, index) => {
-        totalPrice += item.priceAfterReduction * quatities[index];
-      });
+      (await getTotalPriceWithDiscount(products, codes)).forEach(
+        (item, index) => {
+          totalPrice += item.priceAfterReduction
+            ? item.priceAfterReduction * quatities[index]
+            : item.price * quatities[index];
+        }
+      );
     }
     const user = await User.findById({ _id: req.user.id });
     body.subTotalPrice = totalPrice;
     //here we have all the necessary info
-    body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
-    body.ownerId = req.user.id;
-
+    //TODO body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
+    body.totalPrice = totalPrice;
+    body.userId = req.user.id;
     const order = new OrdersModel(body);
-    const result = await Promise.all([
-      user.update({ $push: { orders: order._id } }).exec(),
-      order.save(),
-    ]);
-
-    sendCreatedResponse(res, result[1]);
+    (await session).withTransaction(async () => {
+      const [, newOrder] = await Promise.all([
+        user.update({ $push: { orders: order._id } }).exec(),
+        order.save(),
+      ]);
+      sendCreatedResponse(res, newOrder);
+    });
   } catch (error) {
     sendErrorResponse(res, error);
+  } finally {
+    (await session).endSession();
   }
 });
 
@@ -80,8 +130,8 @@ ordersRouter.get("/", async (req: Request, res: Response) => {
       ? { active: JSON.parse(req.query.active) }
       : {};
     const orders = await OrdersModel.find(filteringObject).populate(
-      "ownerId",
-      "_id name"
+      "userId",
+      "_id name address"
     );
     sendOKResponse(res, orders);
   } catch (error) {
@@ -106,7 +156,7 @@ ordersRouter.delete("/:orderId", [Auth], async (req: any, res: Response) => {
   }
 });
 ordersRouter.get("/:orderId", async (req: Request, res: Response) => {
-  const orderId = req.params.orderId;
+  const { orderId } = req.params;
   try {
     const order = await OrdersModel.findById(orderId);
     sendOKResponse(res, order);
@@ -115,7 +165,7 @@ ordersRouter.get("/:orderId", async (req: Request, res: Response) => {
   }
 });
 ordersRouter.put("/:orderId", async (req: Request, res: Response) => {
-  const state = req.body.state;
+  const { state } = req.body;
   try {
     if (ordersStates.includes(state)) {
       const order = await OrdersModel.findByIdAndUpdate(

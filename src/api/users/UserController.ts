@@ -18,7 +18,6 @@ export async function handleUserSignUp(
     const gfs = getGFS();
     const photosFiles = extractFilesFromRequestFields(req);
     const body: IUser = pick(req.body, params) as IUser;
-    body.provider = "local";
     body.profilePhoto = photosFiles.profilePhotoFile.filename;
     body.profileBanner = photosFiles.profilePhotoBanner.filename;
     body.address = body.address
@@ -100,7 +99,6 @@ export async function updateUser(
           if (user.profilePhoto) removeFile(gfs, user.profilePhoto);
           user.profilePhoto = photos.profilePhotoFile.filename;
         }
-
         newUser.adresse = newUser.adresse ? newUser.adresse[0] : undefined;
         if (newUser.socialMedia) user.socialMedia = newUser.socialMedia;
         if (newUser.phone) user.phone = newUser.phone;
@@ -125,14 +123,10 @@ export async function getUsers(
   sort: number,
   start: Date,
   end: Date,
-  artist: string,
-  active: string,
-  storeName: string
+  active: string
 ): Promise<[IUser[], number]> {
   const filter: {
     name?: { $regex: string; $options: string };
-    isArtist?: boolean;
-    storeName?: { $regex: string; $options: string };
     active?: boolean;
     createdAt?: {
       $gte: Date;
@@ -140,8 +134,6 @@ export async function getUsers(
     };
   } = {};
   if (name) filter["name"] = { $regex: name, $options: "i" };
-  if (storeName) filter["storeName"] = { $regex: storeName, $options: "i" };
-  if (artist) filter["isArtist"] = JSON.parse(artist);
   if (active) filter["active"] = JSON.parse(active);
   if (start != undefined && end != undefined) {
     filter["createdAt"] = {

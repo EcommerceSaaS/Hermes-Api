@@ -1,56 +1,73 @@
 import { wilayasPricing } from "../../utils/WilayaPricing";
 import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
-import { User } from "../users/UserModel";
+import { IOrderRequest } from "./IOrder";
+const AMOUNT = "Amount";
+const PERCENTAGE = "Percentage";
+
 export async function getTotalPriceWithDiscount(
   products: IProduct[],
   codes: Array<ICode>
 ): Promise<IProduct[]> {
   return new Promise<IProduct[]>(async (res) => {
     const result = new Set<IProduct>();
-    for (const design of products) {
+    for (const product of products) {
       let promoCodeApplied = false;
       for (const code of codes) {
-        //for each design check if code is applied
-        if (promoCodeApplied) continue;
+        //for each product check if promocode was applied
+        //but we can apply multiple reductions
+        if (promoCodeApplied && code.type === "PROMOCODE") continue;
         if (
-          design._id.equals(code.design) ||
-          design.categories.includes(code.category)
+          product._id.equals(code.product) ||
+          product.categories.includes(code.category)
         ) {
-          result.add(updateDesignPrice(code, design));
+          result.add(updateProductPrice(code, product));
           if (code.kind === "PROMOCODE") promoCodeApplied = true;
-        } else if (code.artist) {
-          // we access database just in case no category or design id can be applied
-          const user = await User.findOne({
-            _id: code.artist,
-            products: design._id,
-          });
-          if (user) {
-            result.add(updateDesignPrice(code, design));
-            if (code.kind === "PROMOCODE") promoCodeApplied = true;
-          } else {
-            design.priceAfterReduction = design.basePrice;
-            result.add(design);
-          }
+        } else {
+          //if no code was applied to the product add it as it is
+          result.add(product);
         }
       }
-      //if node code was applied to the design add it as it is
     }
     res([...result]);
   });
 }
-function updateDesignPrice(code: ICode, design: IProduct) {
-  if (!design.priceAfterReduction)
-    design.priceAfterReduction = design.basePrice;
+function updateProductPrice(code: ICode, product: IProduct) {
+  if (!product.priceAfterReduction) product.priceAfterReduction = product.price;
   switch (code.type) {
-    case "Amount":
-      design.priceAfterReduction -= code.amount;
+    case AMOUNT: {
+      product.priceAfterReduction -= code.amount;
       break;
-    case "Percentage":
-      design.priceAfterReduction -= (code.amount * design.basePrice) / 100;
+    }
+    case PERCENTAGE: {
+      product.priceAfterReduction -= (code.amount * product.price) / 100;
       break;
+    }
   }
-  return design;
+  return product;
+}
+export function normalizeOptionsAndValues(
+  products: IOrderRequest[]
+): {
+  [productRef: string]: {
+    [optionRef: string]: string[];
+  };
+} {
+  const productsBeforeValues: {
+    [productRef: string]: {
+      [optionRef: string]: string[];
+    };
+  } = {};
+  products.forEach((product: IOrderRequest) => {
+    productsBeforeValues[product.productRef] = {};
+    product.options.forEach(
+      (option: { optionId: string; values: string[] }) => {
+        productsBeforeValues[product.productRef][option.optionId] =
+          option.values;
+      }
+    );
+  });
+  return productsBeforeValues;
 }
 
 export function getShippingPriceByWilaya(wilaya: string): number {

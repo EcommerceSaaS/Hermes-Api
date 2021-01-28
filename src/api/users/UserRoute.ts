@@ -5,7 +5,6 @@ import { ObjectID } from "mongodb";
 import { updateUser, deleteUser, getUsers, getUser } from "./UserController";
 import moment from "moment";
 import { authRouter } from "./UserAuth";
-import { artistRouter } from "./artist/ArtistAuth";
 import { getGFS } from "../../config/DataBaseConnection";
 import { getMulterFields } from "../../config/multerConfig";
 import { MulterError } from "multer";
@@ -33,19 +32,17 @@ class UserRoute {
     this.router.use("/:userId/products", productsRouter);
     this.router.use("/:userId/categories", categoriesRouter);
     this.router.use("/auth", authRouter);
-    this.router.use("/artists", artistRouter);
     this.router.use("/admins", adminRouter);
     this.router.get(
       "/",
       // [auth, artist],
       async (req: Request, res: Response) => {
-        let { limit, page, sort, start, end, q, storeName } = req.query;
-        const { artist, active } = req.query;
+        let { limit, page, sort, start, end, q } = req.query;
+        const { active } = req.query;
         limit = Number(limit) || 10;
         page = Number(page) || 1;
         sort = Number(sort);
         q = q || "";
-        storeName = storeName || "";
         end = end && moment(end, "YYYY-MM-DD").toDate();
         start = start && (start = moment(start, "YYYY-MM-DD").toDate());
         try {
@@ -56,9 +53,7 @@ class UserRoute {
             sort ? sort : -1,
             start,
             end,
-            artist,
-            active,
-            storeName
+            active
           );
           sendOKResponse(res, { users: result[0], count: result[1] });
         } catch (error) {

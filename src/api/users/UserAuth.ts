@@ -28,12 +28,7 @@ class AuthManager {
         const profile = await google(accessToken);
         callback(accessToken, null, profile, (err, user) => {
           if (err) return sendErrorResponse(res, err);
-          const result = omit(user.toJSON(), [
-            "isAdmin",
-            "isArtist",
-            "active",
-            "tokens",
-          ]);
+          const result = omit(user.toJSON(), ["isAdmin", "active", "tokens"]);
           result.token = user.sign();
           res.send(result);
         });
@@ -47,12 +42,7 @@ class AuthManager {
         const profile = await facebook(accessToken);
         callback(accessToken, null, profile, (err, user) => {
           if (err) return sendErrorResponse(res, err);
-          const result = omit(user.toJSON(), [
-            "isAdmin",
-            "isArtist",
-            "active",
-            "tokens",
-          ]);
+          const result = omit(user.toJSON(), ["isAdmin", "active", "tokens"]);
           result.token = user.sign();
           res.send(result);
         });

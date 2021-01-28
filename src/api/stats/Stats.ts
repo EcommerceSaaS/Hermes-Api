@@ -482,11 +482,7 @@ statsRouter.get("/artist-stats", [Auth], async (req: any, res: Response) => {
           },
         },
       ]),
-      OrdersModel.find({
-        "designs.designRef": { $in: [...user.designs] },
-      })
-        .populate("ownerId", "_id name")
-        .limit(6),
+      OrdersModel.find().populate("ownerId", "_id name").limit(6),
       OrdersModel.aggregate([
         {
           $unwind: "$designs",
