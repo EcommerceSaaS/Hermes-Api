@@ -6,19 +6,17 @@ import {
   sendErrorResponse,
   sendOKResponse,
 } from "../../services/http/Responses";
-import { pick, values } from "lodash";
+import { pick } from "lodash";
 import { ProductModel } from "../product/ProductsModel";
 import { CodeModel } from "../promo-code/CodeModel";
-import { IProduct } from "../product/IProduct";
+
 import { User } from "../users/UserModel";
 import Auth from "../../services/middlewares/Auth";
 import {
   getTotalPriceWithDiscount,
-  getShippingPriceByWilaya,
   normalizeOptionsAndValues,
 } from "./OrdersController";
 import { IOrder, IOrderRequest } from "./IOrder";
-import { IOption } from "../option/IOption";
 import mongoose from "mongoose";
 interface IValue {
   name: string;
