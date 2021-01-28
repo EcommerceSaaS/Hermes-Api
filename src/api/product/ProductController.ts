@@ -33,11 +33,11 @@ export async function createProduct(
         return rej(error.details[0].message);
       }
       (await session).withTransaction(async () => {
-        const optionIds: string[] = body.options.filter(
-          (option) => typeof option === "string"
+        const optionIds: string[] = (body.options as string[]).filter(
+          (option: any) => typeof option === "string"
         );
         const options = body.options.filter(
-          (option) => typeof option !== "string"
+          (option: any) => typeof option !== "string"
         );
         const newOptions: string[] = (
           await OptionsModel.insertMany(options)

@@ -1,6 +1,7 @@
 import { wilayasPricing } from "../../utils/WilayaPricing";
 import { IProduct } from "../product/IProduct";
 import { ICode } from "../promo-code/ICode";
+import { IOrderRequest } from "./IOrder";
 const AMOUNT = "Amount";
 const PERCENTAGE = "Percentage";
 
@@ -44,6 +45,29 @@ function updateProductPrice(code: ICode, product: IProduct) {
     }
   }
   return product;
+}
+export function normalizeOptionsAndValues(
+  products: IOrderRequest[]
+): {
+  [productRef: string]: {
+    [optionRef: string]: string[];
+  };
+} {
+  const productsBeforeValues: {
+    [productRef: string]: {
+      [optionRef: string]: string[];
+    };
+  } = {};
+  products.forEach((product: IOrderRequest) => {
+    productsBeforeValues[product.productRef] = {};
+    product.options.forEach(
+      (option: { optionId: string; values: string[] }) => {
+        productsBeforeValues[product.productRef][option.optionId] =
+          option.values;
+      }
+    );
+  });
+  return productsBeforeValues;
 }
 
 export function getShippingPriceByWilaya(wilaya: string): number {

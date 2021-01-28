@@ -15,6 +15,7 @@ import Auth from "../../services/middlewares/Auth";
 import {
   getTotalPriceWithDiscount,
   getShippingPriceByWilaya,
+  normalizeOptionsAndValues,
 } from "./OrdersController";
 import { IOrder, IOrderRequest } from "./IOrder";
 import { IOption } from "../option/IOption";
@@ -26,9 +27,8 @@ interface IValue {
 }
 const ordersRouter = Router();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-ordersRouter.post("/", [], async (req: any, res: Response) => {
+ordersRouter.post("/", [Auth], async (req: any, res: Response) => {
   const body: IOrder = pick(req.body, [
-    "address",
     "products",
     "subTotalPrice",
     "totalPrice",
@@ -37,6 +37,7 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
   ]) as IOrder;
   const { error } = validateOrder(body);
   if (error) return sendBadRequestResponse(res, error.details[0].message);
+  const session = mongoose.startSession();
   try {
     const productsIds = body.products.map(
       (item: IOrderRequest) => item.productRef
@@ -46,22 +47,15 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
       [productRef: string]: {
         [optionRef: string]: string[];
       };
-    } = {};
-    body.products.forEach((product: IOrderRequest) => {
-      productsBeforeValues[product.productRef] = {};
-      product.options.forEach(
-        (option: { optionId: string; values: string[] }) => {
-          productsBeforeValues[product.productRef][option.optionId] =
-            option.values;
-        }
-      );
-    });
+    } = normalizeOptionsAndValues(body.products);
     const quatities = body.products.map((item: IOrderRequest) => item.quantity);
     const [codes, products] = await Promise.all([
       CodeModel.find({
-        //TODO take code expiration date into ocnsideration when filtering codes
         $or: [{ code: body.promoCode }, { kind: "REDUCTION" }],
         active: true,
+        expirationDate: {
+          $gte: new Date(),
+        },
       }),
       ProductModel.find({ _id: { $in: [...productsIds] } })
         .populate("options")
@@ -71,7 +65,7 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
       let price = product.basePrice;
       product.options.forEach((option: any) => {
         if (option.singleChoice) {
-          // we'll the price since it's only one value
+          // we'll accumulate the price since it's only one value
           if (productsBeforeValues[product._id][option._id]) {
             price += option.values.find(
               (value: IValue) =>
@@ -80,7 +74,7 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
             ).price;
           }
         } else {
-          //otherwise we loop over the values and add the prices
+          //otherwise we loop over the values and add their prices
           option.values.forEach((value: IValue) => {
             if (
               productsBeforeValues[product._id][option._id].includes(
@@ -111,22 +105,24 @@ ordersRouter.post("/", [], async (req: any, res: Response) => {
         }
       );
     }
-    //TODO push order id to the user order array and add shipping price
-    // const user = await User.findById({ _id: req.user.id });
+    const user = await User.findById({ _id: req.user.id });
     body.subTotalPrice = totalPrice;
     //here we have all the necessary info
-    // body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
+    //TODO body.totalPrice = totalPrice + getShippingPriceByWilaya(user.address.state);
     body.totalPrice = totalPrice;
-    body.userId = "5fe9a3d1d63aea2340b46704";
-    let order = new OrdersModel(body);
-    order = await order.save();
-    // const result = await Promise.all([
-    //   user.update({ $push: { orders: order._id } }).exec(),
-    //   order.save(),
-    // ]);
-    sendCreatedResponse(res, order);
+    body.userId = req.user.id;
+    const order = new OrdersModel(body);
+    (await session).withTransaction(async () => {
+      const [, newOrder] = await Promise.all([
+        user.update({ $push: { orders: order._id } }).exec(),
+        order.save(),
+      ]);
+      sendCreatedResponse(res, newOrder);
+    });
   } catch (error) {
     sendErrorResponse(res, error);
+  } finally {
+    (await session).endSession();
   }
 });
 

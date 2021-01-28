@@ -6,7 +6,6 @@ import bcrypt from "bcrypt";
 import { urlPattern } from "../../utils/utils";
 import { validator } from "../../utils/utils";
 import { ORDERS_SCHEMA } from "../orders/OrdersModel";
-import { PRODUCTS_SCHEMA } from "../product/ProductsModel";
 import { REVIEWS_SCHEMA } from "../reviews/ReviewModel";
 export const USERS_SCHEMA = "User";
 const userSchema = new mongoose.Schema(
@@ -18,12 +17,6 @@ const userSchema = new mongoose.Schema(
       minlength: 3,
       maxlength: 50,
     },
-    storeName: {
-      type: String,
-      trim: true,
-      minlength: 5,
-      maxlength: 50,
-    },
     email: {
       lowercase: true,
       trim: true,
@@ -32,17 +25,16 @@ const userSchema = new mongoose.Schema(
       minlength: 5,
       maxlength: 50,
     },
-    portfolio: {
-      type: String,
-      trim: true,
-    },
     phone: [{ type: String, minlength: 5, maxlength: 50, trim: true }],
-    adresse: new mongoose.Schema({
-      fullAdresse: String,
-      state: String,
-      city: String,
-      postalCode: Number,
-    }),
+    adresse: new mongoose.Schema(
+      {
+        fullAddress: String,
+        state: String,
+        city: String,
+        postalCode: Number,
+      },
+      { _id: false, timestamps: false, versionKey: false }
+    ),
     password: {
       type: String,
       minlength: 8,
@@ -59,16 +51,6 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    description: {
-      type: String,
-      trim: true,
-      minlength: 10,
-      maxlength: 255,
-    },
-    isArtist: {
-      type: Boolean,
-      default: false,
-    },
     profilePhoto: {
       type: String,
     },
@@ -77,18 +59,8 @@ const userSchema = new mongoose.Schema(
     },
     active: {
       type: Boolean,
-      default: false, //true indicates active
+      default: true, //true indicates active xD
     },
-    designs: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: PRODUCTS_SCHEMA,
-        validate: {
-          validator,
-          message: `ObjectId is Not valid`,
-        },
-      },
-    ],
     orders: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -109,7 +81,7 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    provider: String,
+    provider: { type: String },
   },
   {
     versionKey: false,
@@ -128,7 +100,6 @@ userSchema.methods.sign = function () {
   const token = jsonwebtoken.sign(
     {
       id: this._id,
-      isArtist: this.isArtist,
       active: this.active,
     },
     process.env.JWT_PRIVATE_KEY,
@@ -142,7 +113,7 @@ userSchema.methods.userProfileView = function () {
     name: this.name,
     email: this.email,
     phone: this.phone,
-    adresse: this.adresse,
+    address: this.address,
     profilePhoto: this.profilePhoto,
     profileBanner: this.profileBanner,
     token: this.sign(),
@@ -154,13 +125,10 @@ userSchema.methods.artistProfileView = function () {
     name: this.name,
     email: this.email,
     phone: this.phone,
-    adresse: this.adresse,
-    portfolio: this.portfolio,
-    storeName: this.storeName,
+    address: this.address,
     profilePhoto: this.profilePhoto,
     profileBanner: this.profileBanner,
     socialMedia: this.socialMedia,
-    description: this.description,
     provider: this.provider,
     token: this.sign(),
   };
@@ -174,15 +142,23 @@ export function validateUser(user: IUser): Joi.ValidationResult {
     email: Joi.string().email().required(),
     phone: Joi.array().items(Joi.string()).min(1).required(),
     password: Joi.string().min(5).max(50).required(),
-    adresse: Joi.object().keys({
-      fullAdresse: Joi.string().required(),
+    socialMedia: Joi.array()
+      .items(
+        Joi.object({
+          name: Joi.string().required(),
+          link: Joi.string().regex(urlPattern).required(),
+        })
+      )
+      .max(3),
+    address: Joi.object().keys({
+      fullAddress: Joi.string().required(),
       state: Joi.string().required(),
       city: Joi.string().required(),
       postalCode: Joi.number().required(),
     }),
-    // .required(),
     profilePhoto: Joi.string().required(),
-  }).unknown();
+    profileBanner: Joi.string(),
+  });
   return schema.validate(user);
 }
 
@@ -190,8 +166,6 @@ export function validateArtist(artist: IUser): Joi.ValidationResult {
   const schema = Joi.object({
     name: Joi.string().min(3).max(50).required(),
     email: Joi.string().email().required(),
-    storeName: Joi.string().min(5).max(255).required(),
-    portfolio: Joi.string().regex(urlPattern).required(),
     phone: Joi.array().items(Joi.string()).min(1).required(),
     password: Joi.string().min(5).max(50).required(),
     adresse: Joi.object().keys({
@@ -208,8 +182,6 @@ export function validateArtist(artist: IUser): Joi.ValidationResult {
         })
       )
       .max(3),
-    // .required()
-    description: Joi.string().min(10).max(255).required(),
-  }).unknown();
+  });
   return schema.validate(artist);
 }

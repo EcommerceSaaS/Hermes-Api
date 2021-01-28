@@ -3,17 +3,12 @@ import { Document } from "mongoose";
 export interface IUser extends Document {
   id: string;
   name: string;
-  storeName: string;
   email: string;
   phone: string;
   address: IAddress;
-  portfolio: string;
-  description: string;
-  isArtist?: boolean;
   password: string;
   provider: string;
   profilePhotos: string[];
-  designs: string[];
   active: boolean;
   socialMedia: { name: string; link: string }[];
   profilePhoto: string;

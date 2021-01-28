@@ -17,12 +17,6 @@ const ordersSchema = new mongoose.Schema(
         validator,
         message: `ObjectId is Not valid`,
       },
-    }, //TODO recheck this
-    address: {
-      fullAdresse: String,
-      state: String,
-      city: String,
-      postalCode: Number,
     },
     products: [
       new mongoose.Schema(
@@ -114,12 +108,6 @@ const ordersSchema = new mongoose.Schema(
 const OrdersModel = mongoose.model<IOrder>(ORDERS_SCHEMA, ordersSchema);
 function validateOrder(order: IOrder): Joi.ValidationResult {
   const schema = Joi.object({
-    address: Joi.object({
-      fullAdresse: Joi.string().required(),
-      state: Joi.string().required(),
-      city: Joi.string().required(),
-      postalCode: Joi.number().required(),
-    }).required(),
     products: Joi.array().items(
       Joi.object({
         productRef: Joi.string().required(),
