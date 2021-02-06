@@ -54,9 +54,9 @@ categoriesRouter.post("/", (req: Request, res: Response) => {
       return sendErrorResponse(res, err);
     }
     const file = req.file;
-    if (!file) {
-      return sendBadRequestResponse(res, "At least one image is required");
-    }
+    // if (!file) {
+    //   return sendBadRequestResponse(res, "At least one image is required");
+    // }
     const body: ICategory = pick(req.body, ["name"]) as ICategory;
     const { error } = validateCategory(body);
     if (error) {
@@ -64,7 +64,7 @@ categoriesRouter.post("/", (req: Request, res: Response) => {
     }
 
     try {
-      body.pubPhoto = file.filename;
+      body.pubPhoto = file?.filename;
       let category = new Category(body);
       const mongoError = category.validateSync();
       if (mongoError) {

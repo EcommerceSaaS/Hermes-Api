@@ -50,14 +50,14 @@ collectionsRouter.post("/", async (req: Request, res: Response) => {
       return sendErrorResponse(res, err);
     }
     const file = req.file;
-    if (!file) {
-      return sendBadRequestResponse(res, "At least one image is required");
-    }
+    // if (!file) {
+    //   return sendBadRequestResponse(res, "At least one image is required");
+    // }
     const body: ICollection = pick(req.body, ["name"]) as ICollection;
     const { error } = validateCollection(body);
     if (error) return sendBadRequestResponse(res, error.details[0].message);
     try {
-      body.collectionImage = file.filename;
+      body.collectionImage = file?.filename;
       let collection = new Collection(body);
       collection = await collection.save();
       sendCreatedResponse(res, collection);

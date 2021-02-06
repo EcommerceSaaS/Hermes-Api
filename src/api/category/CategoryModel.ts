@@ -12,7 +12,6 @@ const categorySchema = new mongoose.Schema(
     },
     pubPhoto: {
       type: String,
-      required: true,
     },
     active: {
       type: Boolean,
