@@ -18,15 +18,11 @@ function generateLocalStrategyBasedOnModel(
         const user = await Model.findOne({
           email,
         });
-
         if (user) {
           const compareResult = await bcrypt.compare(password, user.password);
           if (compareResult) {
-            if (
-              user.active == true ||
-              user.toJSON().hasOwnProperty("shippingPrice")
-            )
-              return done(null, user);
+            const exist = await adminModel.exists({ _id: user._id });
+            if (user.active == true || exist) return done(null, user);
             else if (user.active == false)
               return done(null, false, {
                 message: "Your account has not been activated yet !",
