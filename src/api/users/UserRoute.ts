@@ -55,7 +55,7 @@ class UserRoute {
             end,
             active
           );
-          sendOKResponse(res, { users: result[0], count: result[1] });
+          sendOKResponse(res, { data: result[0], count: result[1] });
         } catch (error) {
           sendErrorResponse(res, error);
         }

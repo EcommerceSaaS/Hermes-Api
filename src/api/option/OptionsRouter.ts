@@ -26,7 +26,7 @@ optionsRouter.post("/", async (req: Request, res: Response) => {
 optionsRouter.get("/", (req: Request, res: Response) => {
   routesFactory(res, async () => {
     const options = await OptionsModel.find({ active: true });
-    sendOKResponse(res, options);
+    sendOKResponse(res, { data: options });
   });
 });
 

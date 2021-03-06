@@ -36,7 +36,7 @@ reviewsRouter.get("/", async (req: Request, res: Response) => {
         select: { _id: 1, name: 1 },
       },
     ]);
-    sendOKResponse(res, reviews);
+    sendOKResponse(res, { data: reviews });
   } catch (error) {
     sendErrorResponse(res, error);
   }

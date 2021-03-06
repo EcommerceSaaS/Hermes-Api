@@ -28,7 +28,7 @@ categoriesRouter.get("/", async (req: Request, res: Response) => {
       await Category.countDocuments(filter),
     ]);
     sendOKResponse(res, {
-      categories,
+      data: categories,
       count,
     });
   } catch (error) {

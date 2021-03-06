@@ -38,6 +38,7 @@ export async function createProduct(
         return rej(error.details[0].message);
       }
       (await session).withTransaction(async () => {
+        //TODO
         const optionIds: string[] = (body.options as string[]).filter(
           (option) => typeof option === "string"
         );

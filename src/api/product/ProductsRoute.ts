@@ -78,7 +78,7 @@ productsRouter.get("/", async (req: Request, res: Response) => {
       options
     );
     sendOKResponse(res, {
-      products,
+      data: products,
       count: count,
       nbPages: Math.ceil(count / limit),
     });

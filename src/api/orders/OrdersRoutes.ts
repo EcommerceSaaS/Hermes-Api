@@ -133,7 +133,7 @@ ordersRouter.get("/", async (req: Request, res: Response) => {
       "userId",
       "_id name address"
     );
-    sendOKResponse(res, orders);
+    sendOKResponse(res, { data: orders });
   } catch (error) {
     sendErrorResponse(res, error);
   }

@@ -27,7 +27,7 @@ promoCodeRouter.post("/", async (req: Request, res: Response) => {
 promoCodeRouter.get("/", async (req: Request, res: Response) => {
   try {
     const [codes, count] = await getAllCodes(req, true);
-    sendOKResponse(res, { codes, count });
+    sendOKResponse(res, { data: codes, count });
   } catch (error) {
     sendErrorResponse(res, error);
   }

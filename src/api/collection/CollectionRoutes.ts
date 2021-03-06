@@ -27,7 +27,7 @@ collectionsRouter.get("/", async (req: Request, res: Response) => {
       Collection.find(filter),
       Collection.countDocuments(filter),
     ]);
-    sendOKResponse(res, { collections: result[0], count: result[1] });
+    sendOKResponse(res, { data: result[0], count: result[1] });
   } catch (error) {
     sendErrorResponse(res, error);
   }
