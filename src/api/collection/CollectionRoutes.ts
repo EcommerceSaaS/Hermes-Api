@@ -96,7 +96,7 @@ collectionsRouter.put("/:collectionId", async (req: Request, res: Response) => {
         "name",
         "active",
       ]) as ICollection;
-      body.collectionImage = file.filename;
+      if (file) body.collectionImage = file?.filename;
       let collection = await Collection.findById(collectionId);
       removeFiles(gfs, [collection.collectionImage]);
       collection = await Collection.findByIdAndUpdate(collectionId, body, {
